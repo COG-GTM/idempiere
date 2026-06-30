@@ -50,4 +50,8 @@ code { background: #0b1220; padding: 1px 5px; border-radius: 4px; font-size: 12p
 .doc-node__label { font-weight: 700; font-size: 13px; }
 .doc-node__cls { font-family: ui-monospace, monospace; font-size: 11px; color: #93c5fd; }
 .doc-node__table { font-size: 10px; color: var(--muted); margin-top: 2px; }
+.doc-node__lines { font-size: 10px; color: #64748b; margin-top: 2px; }
+.doc-node__flag { font-size: 10px; color: #fca5a5; font-weight: 600; margin-top: 3px; }
+.node-detail__links { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 6px; }
+.src-link--alt { color: #fca5a5; }
 .app__footer { padding: 8px 24px; font-size: 11px; color: #64748b; border-top: 1px solid #334155; }

@@ -49,4 +49,10 @@ function gauge(metric, value, tags) {
   if (dogstatsd) dogstatsd.gauge(metric, value, tags);
 }
 
-module.exports = { initDatadog, increment, gauge };
+// Histogram timing (ms). Datadog derives .avg/.95percentile/.max from this,
+// which the latency monitor alerts on.
+function timing(metric, valueMs, tags) {
+  if (dogstatsd) dogstatsd.timing(metric, valueMs, tags);
+}
+
+module.exports = { initDatadog, increment, gauge, timing };

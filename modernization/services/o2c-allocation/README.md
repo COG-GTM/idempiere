@@ -63,16 +63,25 @@ a Postgres service container.
 
 ## Observability & the seeded regression
 
-- **Sentry** (`SENTRY_DSN`) — posting exceptions captured with allocation context.
+The service is **monitored** by Sentry and Datadog — it does **not** post to Slack
+itself. On a posting failure it only:
+- **Sentry** (`SENTRY_DSN`) — captures the exception with allocation context.
 - **Datadog** (`DD_API_KEY` via the agent) — APM traces (Express + pg) plus
   `o2c.allocation.posting.{success,imbalance}` and `posting.amount` metrics.
-- **Slack → Devin** (`SLACK_INCOMING_WEBHOOK_URL`, optional `DEVIN_API_KEY`) — a
-  posting failure posts to `#sam-dd-demo` and can auto-open a Devin triage session.
+
+Alerting and remediation are owned by those tools' own integrations:
+
+```
+app exception  → Sentry issue   → Sentry→Slack alert rule  ┐
+app imbalance  → Datadog metric → Datadog→Slack monitor    ┘→ #sam-dd-demo
+                                                             → Devin → Jira → session → PR → SonarQube
+```
 
 Set **`ALLOC_BUG=1`** to arm the seeded regression: a refactor that drops the
 realized-FX balancing entry. Single-currency allocations still post; **multi-currency
 allocations break** (`PostingNotBalancedError`, HTTP 422) — a realistic partial
-outage that fires the alert path and is caught by the parity test.
+outage that surfaces in Sentry + Datadog (which then alert) and is caught by the
+parity test.
 
 All credentials come from the environment and are never logged. The service runs
 fully even when every observability integration is unset (they degrade to no-ops).
