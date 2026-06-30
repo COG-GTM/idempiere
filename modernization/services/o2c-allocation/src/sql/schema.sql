@@ -87,3 +87,16 @@ CREATE TABLE IF NOT EXISTS fact_acct (
 );
 
 CREATE INDEX IF NOT EXISTS idx_fact_acct_record ON fact_acct (ad_table_id, record_id);
+
+-- Indexes below restore coverage that existed in the Oracle source but was
+-- dropped during the Oracle→PostgreSQL migration.  Without them the GL posting
+-- path (getRate / loadAllocation) falls back to sequential scans.
+
+-- Covers the conversion-rate lookup in getRate(): WHERE c_currency_id = $1
+-- AND c_currency_id_to = $2 AND … ORDER BY validfrom DESC LIMIT 1.
+CREATE INDEX IF NOT EXISTS idx_conversion_rate_lookup
+  ON c_conversion_rate (c_currency_id, c_currency_id_to, validfrom DESC);
+
+-- Covers the allocation-line load in loadAllocation(): WHERE c_allocationhdr_id = $1.
+CREATE INDEX IF NOT EXISTS idx_allocationline_hdr
+  ON c_allocationline (c_allocationhdr_id);
