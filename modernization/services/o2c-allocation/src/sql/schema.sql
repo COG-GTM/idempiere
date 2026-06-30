@@ -87,3 +87,10 @@ CREATE TABLE IF NOT EXISTS fact_acct (
 );
 
 CREATE INDEX IF NOT EXISTS idx_fact_acct_record ON fact_acct (ad_table_id, record_id);
+
+-- Covering index for GL reconciliation (recomputeBalances). Restores the Oracle-
+-- era index coverage that the initial migration dropped, enabling an index-only
+-- scan for the per-allocation DR/CR aggregation.
+CREATE INDEX IF NOT EXISTS idx_fact_acct_recon
+    ON fact_acct (ad_table_id, record_id)
+    INCLUDE (amtacctdr, amtacctcr);
