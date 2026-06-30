@@ -1,0 +1,23 @@
+{
+  "name": "o2c-allocation-service",
+  "version": "1.0.0",
+  "description": "Pre-completed migration slice: iDempiere Order-to-Cash allocation -> GL posting, re-implemented on PostgreSQL-native SQL and instrumented with Sentry + Datadog.",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "migrate": "node src/migrate.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@sentry/node": "^8.47.0",
+    "axios": "^1.7.9",
+    "dd-trace": "^5.30.0",
+    "express": "^4.21.2",
+    "hot-shots": "^10.2.1",
+    "pg": "^8.13.1"
+  }
+}
