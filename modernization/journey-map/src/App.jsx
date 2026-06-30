@@ -1,16 +1,29 @@
 import React, { useMemo, useState } from "react";
 import ReactFlow, { Background, Controls, Handle, Position } from "reactflow";
 import "reactflow/dist/style.css";
-import { journeys, DISPOSITIONS, srcUrl } from "./journeys.js";
+import { journeys, DISPOSITIONS, LAYERS, srcUrl } from "./journeys.js";
+
+// Dark-themed per-layer accents (node text is light, so keep backgrounds dark).
+const LAYER_STYLE = {
+  document: { bg: "#0b1220" },
+  posting: { bg: "#1a1407", border: "#d97706" },
+  gl: { bg: "#0a1426", border: "#2563eb" },
+  deployable: { bg: "#08160f", border: "#1f9d55" },
+  downstream: { bg: "#140e22", border: "#7c3aed" },
+};
 
 function DocNode({ data }) {
-  const color = DISPOSITIONS[data.disposition].color;
+  const dispColor = DISPOSITIONS[data.disposition].color;
+  const ls = LAYER_STYLE[data.layer] || {};
+  const border = ls.border || (data.layer === "document" ? dispColor : "#cbd5e1");
   return (
-    <div className="doc-node" style={{ borderColor: color }} onClick={data.onClick}>
+    <div className="doc-node" style={{ borderColor: border, background: ls.bg }} onClick={data.onClick}>
       <Handle type="target" position={Position.Left} />
       <div className="doc-node__label">{data.label}</div>
       <div className="doc-node__cls">{data.cls}</div>
       {data.table && <div className="doc-node__table">{data.table}</div>}
+      {data.lines ? <div className="doc-node__lines">{data.lines.toLocaleString()} LOC</div> : null}
+      {data.oracle && <div className="doc-node__flag">Oracle SQL ⚠</div>}
       <Handle type="source" position={Position.Right} />
     </div>
   );
@@ -24,13 +37,28 @@ export default function App() {
   const journey = journeys.find((j) => j.id === activeId);
 
   const { nodes, edges } = useMemo(() => {
-    const idx = Object.fromEntries(journey.nodes.map((n, i) => [n.id, i]));
-    const nodes = journey.nodes.map((n, i) => ({
-      id: n.id,
-      type: "doc",
-      position: { x: i * 230, y: 80 + (i % 2) * 70 },
-      data: { ...n, disposition: journey.disposition, onClick: () => setSelected(n) },
-    }));
+    // Lay out by layer: spread each layer's nodes horizontally at its row Y.
+    const byLayer = {};
+    journey.nodes.forEach((n) => {
+      (byLayer[n.layer] = byLayer[n.layer] || []).push(n);
+    });
+    // gl + posting share a row; deployable + downstream share a row — offset within.
+    const colX = (layer, i) => {
+      if (layer === "gl") return 1180;
+      if (layer === "downstream") return 1180;
+      if (layer === "deployable") return 720;
+      return i * 235; // document spine + posting
+    };
+    const nodes = journey.nodes.map((n, i) => {
+      const peers = byLayer[n.layer];
+      const idxInLayer = peers.indexOf(n);
+      return {
+        id: n.id,
+        type: "doc",
+        position: { x: colX(n.layer, idxInLayer), y: LAYERS[n.layer].y + (n.layer === "posting" ? 0 : 0) },
+        data: { ...n, disposition: journey.disposition, onClick: () => setSelected(n) },
+      };
+    });
     const edges = journey.edges.map(([s, t]) => ({
       id: `${s}-${t}`,
       source: s,
@@ -38,7 +66,7 @@ export default function App() {
       animated: true,
       style: { stroke: "#94a3b8" },
     }));
-    return { nodes, edges, idx };
+    return { nodes, edges };
   }, [journey]);
 
   return (
@@ -46,7 +74,8 @@ export default function App() {
       <header className="app__header">
         <h1>iDempiere — User Journey Migration Map</h1>
         <p className="app__sub">
-          Legacy Oracle/COTS ERP · journeys rediscovered from code · color = migration disposition
+          Legacy Oracle/COTS ERP · journeys rediscovered from source · document spine → posting engine
+          (<code>Doc_*</code>) → <code>Fact_Acct</code> → downstream · color = migration disposition
         </p>
       </header>
 
@@ -106,21 +135,29 @@ export default function App() {
               <h3>{selected.label} — <code>{selected.cls}</code></h3>
               <ul>
                 {selected.table && <li>Tables: <code>{selected.table}</code></li>}
-                {selected.lines && <li>Source size: {selected.lines} lines</li>}
+                {selected.lines ? <li>Source size: {selected.lines.toLocaleString()} lines (measured)</li> : null}
+                {selected.note && <li>{selected.note}</li>}
                 {selected.oracle && <li className="oracle">Oracle coupling: {selected.oracle}</li>}
               </ul>
-              <a className="src-link" href={srcUrl(selected.file, selected.lines && 1)} target="_blank" rel="noreferrer">
-                View source ↗
-              </a>
+              <div className="node-detail__links">
+                <a className="src-link" href={srcUrl(selected.file, selected.line)} target="_blank" rel="noreferrer">
+                  View source ↗
+                </a>
+                {selected.convFile && (
+                  <a className="src-link src-link--alt" href={srcUrl(selected.convFile, selected.convLine)} target="_blank" rel="noreferrer">
+                    SQL conversion layer ↗
+                  </a>
+                )}
+              </div>
             </div>
           ) : (
-            <p className="hint">Click a document node to inspect its class, tables and source.</p>
+            <p className="hint">Click any node — document, posting class, GL sink, the migrated service, or a downstream consumer — to inspect its class, tables, line count and source.</p>
           )}
         </aside>
       </div>
 
       <footer className="app__footer">
-        Generated by Devin from the iDempiere codebase · stand-in for a legacy Oracle/COTS ERP
+        Generated by Devin from the iDempiere codebase · line counts measured from source · stand-in for a legacy Oracle/COTS ERP
       </footer>
     </div>
   );
