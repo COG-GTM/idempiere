@@ -51,6 +51,23 @@ radius.
 4. **Phase 3 — Rewrite**: Order-to-Cash behind a strangler facade (pricing/allocation), cut over by document type.
 5. **Phase 4 — Decommission**: retire Oracle journey-by-journey once parity holds.
 
+## 5a. Execution-ready backlog (Jira L8N2)
+The plan above is decomposed into an execution-ready backlog under Epic **L8N2-39**
+("Oracle/COTS Modernization — journey-led migration"). One story per journey slice, each carrying
+acceptance criteria, source links, a golden-dataset parity-test requirement, a downstream-impact
+note, and a `disposition-*` label.
+
+| Story | Journey | Disposition |
+|---|---|---|
+| `L8N2-41` | Order-to-Cash — allocation posting (DECODE/`(+)` → Postgres) | Rewrite |
+| `L8N2-42` | Procure-to-Pay — PO matching via `Convert_PostgreSQL` | Refactor |
+| `L8N2-43` | Manufacturing/Production posting via `Convert_PostgreSQL` | Refactor |
+| `L8N2-44` | Record-to-Report posting engine — schema conversion | Carry-Forward |
+| `L8N2-45` | Inventory / Material Movement — schema conversion | Carry-Forward |
+
+Backlog ordering follows the phased roadmap: Rewrite/Refactor slices are scoped first, Carry-Forward
+slices follow. No story is assigned until a human picks up the first slice.
+
 ## 6. Risk register (top)
 | Risk | Journey | Mitigation |
 |---|---|---|
