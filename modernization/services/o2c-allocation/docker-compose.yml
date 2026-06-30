@@ -1,0 +1,51 @@
+# Full local stack for the migrated O2C allocation slice:
+#   postgres (the migration target DB) + the instrumented service + a Datadog
+#   agent (optional; only forwards if DD_API_KEY is set).
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: o2c
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d o2c"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  o2c-allocation:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: o2c
+      PORT: 3001
+      # Observability (optional — service runs without them):
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      DD_AGENT_HOST: datadog-agent
+      SLACK_INCOMING_WEBHOOK_URL: ${SLACK_INCOMING_WEBHOOK_URL:-}
+      DEVIN_API_KEY: ${DEVIN_API_KEY:-}
+      # Flip to "1" to arm the seeded regression (multi-currency postings break):
+      ALLOC_BUG: ${ALLOC_BUG:-0}
+    ports:
+      - "3001:3001"
+
+  datadog-agent:
+    image: gcr.io/datadoghq/agent:7
+    profiles: ["observability"]
+    environment:
+      DD_API_KEY: ${DD_API_KEY:-}
+      DD_SITE: ${DD_SITE:-datadoghq.com}
+      DD_APM_ENABLED: "true"
+      DD_APM_NON_LOCAL_TRAFFIC: "true"
+      DD_DOGSTATSD_NON_LOCAL_TRAFFIC: "true"
+    ports:
+      - "8126:8126"
+      - "8125:8125/udp"
