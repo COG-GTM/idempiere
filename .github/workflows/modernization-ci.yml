@@ -1,0 +1,42 @@
+name: Modernization CI
+
+# Fast PR gate for the modernization workstream (journey map + enrichment tooling).
+# The full iDempiere build/analysis runs via the heavier SonarQube workflow (manual dispatch).
+on:
+  pull_request:
+    paths: ["modernization/**", ".github/workflows/modernization-ci.yml"]
+  push:
+    branches: [master]
+    paths: ["modernization/**"]
+  workflow_dispatch:
+
+jobs:
+  journey-map:
+    name: Build journey map
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: modernization/journey-map
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: modernization/journey-map/package-lock.json
+      - run: npm ci
+      - run: npm run build
+
+  tooling:
+    name: Enrichment tooling tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: modernization/tools
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - run: python -m pytest -q

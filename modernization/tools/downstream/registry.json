@@ -1,0 +1,74 @@
+{
+  "journey_to_system": {
+    "order-to-cash": "SYS-O2C-CORE",
+    "procure-to-pay": "SYS-P2P-CORE",
+    "record-to-report": "SYS-R2R-GL",
+    "inventory": "SYS-INV-WMS",
+    "manufacturing": "SYS-MFG-PLANT"
+  },
+  "systems": {
+    "SYS-O2C-CORE": {
+      "name": "Order-to-Cash core",
+      "business_service": "Revenue / AR",
+      "criticality": "Tier-1",
+      "owner_team": "Revenue Platform",
+      "change_window": "Sat 02:00-05:00 UTC",
+      "downstream_consumers": [
+        {"name": "Revenue recognition feed", "type": "batch ETL", "owner_team": "Finance Data", "sla": "T+1 06:00", "impact_if_broken": "Mis-stated revenue; period-close risk"},
+        {"name": "CRM order sync", "type": "API", "owner_team": "Sales Ops", "sla": "near-real-time", "impact_if_broken": "Reps see stale order/shipment status"},
+        {"name": "Treasury cash position", "type": "batch", "owner_team": "Treasury", "sla": "T+1 07:00", "impact_if_broken": "Cash forecasting drift"},
+        {"name": "Tax engine", "type": "API", "owner_team": "Tax", "sla": "real-time", "impact_if_broken": "Incorrect tax on invoices"}
+      ],
+      "approvers": [
+        {"name": "Revenue Platform lead", "role": "Service owner"},
+        {"name": "Change Advisory Board", "role": "CAB"}
+      ]
+    },
+    "SYS-P2P-CORE": {
+      "name": "Procure-to-Pay core",
+      "business_service": "Procurement / AP",
+      "criticality": "Tier-2",
+      "owner_team": "Procurement Platform",
+      "change_window": "Sun 02:00-05:00 UTC",
+      "downstream_consumers": [
+        {"name": "Supplier portal", "type": "API", "owner_team": "Procurement", "sla": "near-real-time", "impact_if_broken": "Suppliers see wrong PO/receipt status"},
+        {"name": "AP payment run", "type": "batch", "owner_team": "Finance Ops", "sla": "weekly", "impact_if_broken": "Missed/duplicate supplier payments"}
+      ],
+      "approvers": [{"name": "Procurement Platform lead", "role": "Service owner"}]
+    },
+    "SYS-R2R-GL": {
+      "name": "Record-to-Report GL",
+      "business_service": "General Ledger / Reporting",
+      "criticality": "Tier-1",
+      "owner_team": "Finance Systems",
+      "change_window": "Sat 02:00-05:00 UTC",
+      "downstream_consumers": [
+        {"name": "BI / data warehouse", "type": "batch ETL", "owner_team": "Analytics", "sla": "T+1 05:00", "impact_if_broken": "Reporting outage"},
+        {"name": "Regulatory reporting", "type": "batch", "owner_team": "Compliance", "sla": "monthly", "impact_if_broken": "Filing risk"}
+      ],
+      "approvers": [{"name": "Finance Systems lead", "role": "Service owner"}]
+    },
+    "SYS-INV-WMS": {
+      "name": "Inventory / WMS",
+      "business_service": "Warehouse",
+      "criticality": "Tier-2",
+      "owner_team": "Supply Chain Systems",
+      "change_window": "Sun 02:00-05:00 UTC",
+      "downstream_consumers": [
+        {"name": "Warehouse management system", "type": "API", "owner_team": "Logistics", "sla": "near-real-time", "impact_if_broken": "Pick/pack disruption"}
+      ],
+      "approvers": [{"name": "Supply Chain Systems lead", "role": "Service owner"}]
+    },
+    "SYS-MFG-PLANT": {
+      "name": "Manufacturing / Plant",
+      "business_service": "Production",
+      "criticality": "Tier-3",
+      "owner_team": "Plant Systems",
+      "change_window": "Sun 02:00-05:00 UTC",
+      "downstream_consumers": [
+        {"name": "MES integration", "type": "API", "owner_team": "Plant IT", "sla": "near-real-time", "impact_if_broken": "Production reporting gaps"}
+      ],
+      "approvers": [{"name": "Plant Systems lead", "role": "Service owner"}]
+    }
+  }
+}
