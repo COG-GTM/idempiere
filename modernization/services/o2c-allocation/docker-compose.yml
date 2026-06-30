@@ -27,11 +27,10 @@ services:
       PGPASSWORD: postgres
       PGDATABASE: o2c
       PORT: 3001
-      # Observability (optional — service runs without them):
+      # Observability (optional — service runs without them). The service only
+      # emits to Sentry + Datadog; alerting to Slack is owned by those tools.
       SENTRY_DSN: ${SENTRY_DSN:-}
       DD_AGENT_HOST: datadog-agent
-      SLACK_INCOMING_WEBHOOK_URL: ${SLACK_INCOMING_WEBHOOK_URL:-}
-      DEVIN_API_KEY: ${DEVIN_API_KEY:-}
       # Flip to "1" to arm the seeded regression (multi-currency postings break):
       ALLOC_BUG: ${ALLOC_BUG:-0}
     ports:

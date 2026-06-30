@@ -1,0 +1,37 @@
+name: SonarCloud (modernization)
+
+# Quality gate for the modernization workstream (Node services + tooling under
+# modernization/). This is the gate that runs on the auto-PRs Devin opens when it
+# triages an o2c-allocation incident — it is intentionally fast (no Maven/Tycho
+# build). The full Java analysis lives in sonarqube.yml (manual-dispatch only).
+on:
+  pull_request:
+    paths:
+      - "modernization/**"
+      - ".github/workflows/sonarcloud-modernization.yml"
+  push:
+    branches: [master]
+    paths:
+      - "modernization/**"
+  workflow_dispatch:
+
+jobs:
+  sonarcloud:
+    name: Analyze modernization/
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history for accurate new-code detection
+      - name: SonarCloud scan
+        uses: SonarSource/sonarqube-scan-action@v4
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+        with:
+          args: >
+            -Dsonar.projectKey=${{ vars.sonarProjectKey }}
+            -Dsonar.organization=${{ vars.sonarOrganization }}
+            -Dsonar.sources=modernization
+            -Dsonar.exclusions=**/node_modules/**,**/dist/**,modernization/journey-map/dist/**
+            -Dsonar.sourceEncoding=UTF-8

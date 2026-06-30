@@ -4,13 +4,15 @@ const sentry = require('./telemetry/sentry');
 sentry.initSentry();
 
 const express = require('express');
+const path = require('path');
 const db = require('./db');
 const { migrate } = require('./migrate');
-const { postAllocation } = require('./allocation');
-const alert = require('./alert');
+const { postAllocation, recomputeBalances } = require('./allocation');
 
 const app = express();
 app.use(express.json());
+// Control-panel UI (clickable triggers for the demo).
+app.use(express.static(path.join(__dirname, '..', 'public')));
 
 app.get('/health', async (_req, res) => {
   try {
@@ -35,7 +37,9 @@ app.get('/allocations/:id/facts', async (req, res, next) => {
 });
 
 // Post an allocation to the GL. On a posting failure (e.g. the seeded FX
-// regression), fire the Sentry + Slack + Devin alert path, then 422.
+// regression) the error is captured to Sentry and the Datadog imbalance metric
+// is emitted (in allocation.js). Alerting is owned by Sentry's and Datadog's own
+// Slack integrations — the service never posts to Slack itself.
 app.post('/allocations/:id/post', async (req, res, next) => {
   const id = Number(req.params.id);
   try {
@@ -44,12 +48,23 @@ app.post('/allocations/:id/post', async (req, res, next) => {
   } catch (err) {
     if (err.statusCode === 404) return res.status(404).json({ error: err.message });
     sentry.capturePostingError(err, { allocationId: id, debit: err.debit, credit: err.credit });
-    await alert.raise(err, { allocationId: id });
     if (err.name === 'PostingNotBalancedError') {
       return res.status(422).json({ error: err.message, allocationId: id, debit: err.debit, credit: err.credit });
     }
     next(err);
   }
+});
+
+// Deliberately-slow GL reconciliation. Latency grows with ledger "size" (a
+// dropped-index migration artifact); emits o2c.allocation.posting.duration that
+// the Datadog latency monitor alerts on. The service does not alert itself.
+app.post('/allocations/recompute', async (req, res, next) => {
+  try {
+    const scale = req.body && Number.isFinite(Number(req.body.scale))
+      ? Number(req.body.scale) : undefined;
+    const result = await recomputeBalances({ scale });
+    res.json(result);
+  } catch (e) { next(e); }
 });
 
 sentry.expressErrorHandler(app);

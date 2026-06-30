@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>O2C Allocation → GL Posting · migrated slice</title>
+  <style>
+    :root { --bg:#0b1020; --card:#141b32; --line:#243154; --txt:#e7ecf6; --muted:#9aa7c7;
+            --ok:#2fbf71; --warn:#e8b339; --bad:#e5484d; --accent:#5b8cff; }
+    * { box-sizing: border-box; }
+    body { margin:0; font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+           background:var(--bg); color:var(--txt); }
+    header { padding:28px 32px 8px; }
+    h1 { margin:0 0 4px; font-size:22px; }
+    .sub { color:var(--muted); font-size:14px; }
+    .wrap { display:grid; grid-template-columns:1fr 1fr; gap:18px; padding:20px 32px 40px; max-width:1100px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px 20px; }
+    .card h2 { margin:0 0 4px; font-size:15px; letter-spacing:.02em; }
+    .card p { margin:0 0 14px; color:var(--muted); font-size:13px; }
+    button { appearance:none; border:1px solid var(--line); background:#19233f; color:var(--txt);
+             border-radius:9px; padding:10px 14px; font-size:14px; cursor:pointer; margin:4px 8px 4px 0;
+             transition:transform .05s ease, background .15s ease; }
+    button:hover { background:#1f2a4a; }
+    button:active { transform:translateY(1px); }
+    button.ok { border-color:#1f6b45; }
+    button.bad { border-color:#7a2a2d; }
+    button.warn { border-color:#7a611c; }
+    button:disabled { opacity:.5; cursor:default; }
+    .flow { grid-column:1 / -1; color:var(--muted); font-size:13px; background:var(--card);
+            border:1px dashed var(--line); border-radius:12px; padding:14px 18px; }
+    .flow code { color:var(--accent); }
+    pre { grid-column:1 / -1; background:#0a0f1f; border:1px solid var(--line); border-radius:12px;
+          padding:16px; margin:0; max-height:340px; overflow:auto; font-size:12.5px; white-space:pre-wrap; }
+    .pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; vertical-align:middle; }
+    .pill.ok { background:rgba(47,191,113,.15); color:var(--ok); }
+    .pill.bad { background:rgba(229,72,77,.15); color:var(--bad); }
+    .pill.warn { background:rgba(232,179,57,.15); color:var(--warn); }
+    .spin { display:none; margin-left:8px; color:var(--muted); font-size:12px; }
+    .spin.on { display:inline; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>O2C Allocation → GL Posting <span class="pill ok" id="health">checking…</span></h1>
+    <div class="sub">Pre-completed migration slice · iDempiere Oracle → PostgreSQL · instrumented with Sentry + Datadog</div>
+  </header>
+
+  <div class="wrap">
+    <div class="flow">
+      The service only emits to <b>Sentry</b> (exceptions) and <b>Datadog</b> (metrics). Alerting is owned by those tools:
+      <br/><code>correctness break → Sentry issue → Sentry→Slack → Devin → Jira → PR → SonarQube</code>
+      <br/><code>slow recompute → Datadog latency monitor → Datadog→Slack → Devin → Jira → PR → SonarQube</code>
+    </div>
+
+    <div class="card">
+      <h2>Post an allocation to the GL</h2>
+      <p>Applies a payment/discount/write-off to the ledger and books balanced <code>Fact_Acct</code> lines.</p>
+      <button class="ok"  onclick="post(600)">Post #600 — USD (balanced)</button>
+      <button class="bad" onclick="post(601)">Post #601 — EUR (FX entry)</button>
+      <div class="sub">With <code>ALLOC_BUG=1</code>, #601 drops the realized-FX balancing entry → <b>PostingNotBalancedError</b> → Sentry issue.</div>
+    </div>
+
+    <div class="card">
+      <h2>Run GL reconciliation (slow)</h2>
+      <p>Re-derives every allocation's balance. A dropped-index migration artifact makes it scan an unindexed row product — latency grows with ledger size.</p>
+      <button class="warn" onclick="recompute()">Run slow recompute<span class="spin" id="spin">⏳ running…</span></button>
+      <div class="sub">Emits <code>o2c.allocation.posting.duration</code> → Datadog <b>latency monitor</b> fires.</div>
+    </div>
+
+    <pre id="out">Output will appear here…</pre>
+  </div>
+
+  <script>
+    const out = document.getElementById('out');
+    function show(label, data) {
+      out.textContent = label + '\n' + JSON.stringify(data, null, 2);
+    }
+    async function call(method, url, body) {
+      const res = await fetch(url, {
+        method,
+        headers: body ? { 'Content-Type': 'application/json' } : undefined,
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      const json = await res.json().catch(() => ({}));
+      return { status: res.status, json };
+    }
+    async function post(id) {
+      show('POST /allocations/' + id + '/post …', {});
+      const r = await call('POST', '/allocations/' + id + '/post');
+      show('POST /allocations/' + id + '/post → HTTP ' + r.status, r.json);
+    }
+    async function recompute() {
+      const spin = document.getElementById('spin');
+      spin.classList.add('on');
+      show('POST /allocations/recompute …', {});
+      try {
+        const r = await call('POST', '/allocations/recompute', {});
+        show('POST /allocations/recompute → HTTP ' + r.status, r.json);
+      } finally {
+        spin.classList.remove('on');
+      }
+    }
+    (async () => {
+      try {
+        const r = await call('GET', '/health');
+        const el = document.getElementById('health');
+        if (r.json.status === 'ok') {
+          el.textContent = r.json.bugMode ? 'healthy · bug armed' : 'healthy';
+          el.className = 'pill ' + (r.json.bugMode ? 'warn' : 'ok');
+        } else {
+          el.textContent = 'degraded'; el.className = 'pill bad';
+        }
+      } catch { /* leave default */ }
+    })();
+  </script>
+</body>
+</html>
