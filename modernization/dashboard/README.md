@@ -1,14 +1,16 @@
-# Modernization — Devin activity & audit dashboard
+# Order-to-Cash Modernization — Operations Dashboard
 
-A self-contained, no-build page that surfaces **real Devin activity** across the
-Oracle&nbsp;&rarr;&nbsp;PostgreSQL modernization demo: sessions spawned by the
-observability&nbsp;&rarr;&nbsp;SDLC cascade and the `!plan_migration` playbook, their ACU
-consumption, the PRs they opened, and the SonarCloud gate outcome — plus the journey
-portfolio (Jira L8N2) and an audit trail of the early pre-repoint runs.
+A self-contained, no-build page that presents the **post-Epic-1 state of the modernization
+program** the way a product/ops team would see it: headline KPIs for the migrated Order-to-Cash
+allocation slice (now live on PostgreSQL), the five-journey migration portfolio, live-service
+health, Oracle&nbsp;&rarr;&nbsp;PostgreSQL data-migration parity, and delivery quality.
+
+It is a product-facing dashboard — it deliberately contains **no internal tooling references**
+(no monitoring vendors, no agent/session internals). Just the program and the migrated product.
 
 ## Viewing
 
-Open `index.html` directly in a browser (`file://` works — data is embedded in `data.js`,
+Open `index.html` directly in a browser (`file://` works — all data is embedded in `data.js`,
 no server or API key required), or serve the folder:
 
 ```bash
@@ -16,29 +18,20 @@ cd modernization/dashboard && python3 -m http.server 8080
 # then open http://localhost:8080
 ```
 
-## Where the data comes from
+## Data
 
-`data.js` is a point-in-time snapshot sourced from the **Devin MCP** (no `DEVIN_API_KEY`
-needed — the enterprise REST metrics endpoints require an Enterprise-Admin personal key,
-which the current key is not):
+`data.js` is a point-in-time snapshot (`window.DASHBOARD`) with these sections:
 
-- `devin_session_search` — enumerate demo-window sessions.
-- `devin_session_interact(action="get")` — per-session `acus_consumed`, `status`, `pull_requests`.
-- Jira L8N2 epics via the Atlassian MCP.
+- `kpis` — headline program/service metrics (journeys migrated, postings, balanced rate, GL
+  parity vs Oracle, latency, reconciliation SLA).
+- `portfolio` — the five user-journey epics, their disposition, status, and migration progress.
+- `service` — operational health of the live `o2c-allocation` service (throughput, balanced rate,
+  posting latency, failures).
+- `parity` — data-migration parity checks comparing Oracle-era output to PostgreSQL.
+- `delivery` — delivery quality for the modernization workstream (stories, PRs, quality-gate
+  pass rate, parity tests).
 
 ## Refreshing before a demo
 
-The dashboard is a snapshot, so regenerate `data.js` shortly before presenting:
-
-1. `devin_session_search(created_after=<window start>, first=100)` to list sessions.
-2. For each idempiere/L8N2 session, `devin_session_interact(action="get", ...)` for
-   `acus_consumed` + `pull_requests` (+ PR state).
-3. Update the `sessions`, `preRepoint`, and `generatedAt` fields in `data.js`.
-
-> When an Enterprise-Admin personal API key (`apk_user_…`) becomes available, this can be
-> upgraded to a live pull from the v2 `enterprise/sessions` + v3 ACU-consumption endpoints.
-
-## Audit surface
-
-For a full org-level audit log (who ran what, when), use Devin's built-in usage/audit views
-in the webapp (Settings). This page is the demo-scoped, presenter-facing roll-up.
+The dashboard is a snapshot — update the numbers and `generatedAt` in `data.js` shortly before
+presenting so the figures reflect the current program state. No build step; just edit and reload.

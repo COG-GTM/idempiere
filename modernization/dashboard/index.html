@@ -3,125 +3,146 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Modernization — Devin activity &amp; audit dashboard</title>
+  <title>Order-to-Cash Modernization — Operations Dashboard</title>
   <style>
     :root {
-      --bg: #0d1117; --panel: #161b22; --border: #30363d; --fg: #e6edf3;
-      --muted: #8b949e; --accent: #58a6ff; --green: #3fb950; --amber: #d29922;
-      --red: #f85149; --purple: #bc8cff;
+      --bg: #f6f8fb; --panel: #ffffff; --border: #e4e8ef; --fg: #1b2333;
+      --muted: #64748b; --accent: #2563eb; --green: #16a34a; --amber: #d97706;
+      --red: #dc2626; --track: #eef2f7; --shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.04);
     }
     * { box-sizing: border-box; }
     body { margin: 0; background: var(--bg); color: var(--fg);
-      font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    header { padding: 24px 32px 8px; }
-    h1 { margin: 0 0 4px; font-size: 20px; }
-    .sub { color: var(--muted); font-size: 13px; }
-    .wrap { padding: 16px 32px 48px; }
-    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 12px; margin: 16px 0 28px; }
-    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
-    .card .n { font-size: 28px; font-weight: 700; }
-    .card .l { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
-    h2 { font-size: 14px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted);
-      border-bottom: 1px solid var(--border); padding-bottom: 8px; margin: 28px 0 12px; }
+      font: 14px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    header { background: var(--panel); border-bottom: 1px solid var(--border); padding: 20px 40px; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .logo { width: 30px; height: 30px; border-radius: 7px;
+      background: linear-gradient(135deg, #2563eb, #7c3aed); flex: none; }
+    h1 { margin: 0; font-size: 18px; font-weight: 650; letter-spacing: -.01em; }
+    .phase { margin-top: 2px; color: var(--muted); font-size: 13px; }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 24px 40px 56px; }
+    section { margin-top: 28px; }
+    h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+      margin: 0 0 12px; font-weight: 650; }
+    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+    .kpi { background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+      padding: 16px 18px; box-shadow: var(--shadow); }
+    .kpi .l { color: var(--muted); font-size: 12px; }
+    .kpi .v { font-size: 26px; font-weight: 700; letter-spacing: -.02em; margin: 4px 0 2px; }
+    .kpi .s { color: var(--muted); font-size: 12px; }
+    .kpi .t { display: inline-block; margin-top: 8px; font-size: 11px; font-weight: 600;
+      padding: 2px 8px; border-radius: 999px; background: rgba(37,99,235,.08); color: var(--accent); }
+    .kpi .t.good { background: rgba(22,163,74,.10); color: var(--green); }
+    .grid2 { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; align-items: start; }
+    @media (max-width: 860px) { .grid2 { grid-template-columns: 1fr; } }
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+      box-shadow: var(--shadow); overflow: hidden; }
+    .panel .hd { padding: 14px 18px; border-bottom: 1px solid var(--border); font-weight: 650; font-size: 14px; }
     table { width: 100%; border-collapse: collapse; }
-    th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
-    th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; }
-    td.num { font-variant-numeric: tabular-nums; }
-    a { color: var(--accent); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
-    .pill.open { background: rgba(63,185,80,.15); color: var(--green); }
-    .pill.closed { background: rgba(139,148,158,.2); color: var(--muted); }
-    .pill.rewrite { background: rgba(248,81,73,.15); color: var(--red); }
-    .pill.refactor { background: rgba(210,153,34,.15); color: var(--amber); }
-    .pill.carry-forward, .pill['carry-forward'] { background: rgba(63,185,80,.15); color: var(--green); }
-    .pill.pass { background: rgba(63,185,80,.15); color: var(--green); }
-    .pill.na { background: rgba(139,148,158,.2); color: var(--muted); }
-    .pill.run { background: rgba(88,166,255,.15); color: var(--accent); }
-    .lane { color: var(--purple); font-size: 12px; }
-    .foot { color: var(--muted); font-size: 12px; margin-top: 24px; }
-    code { background: #21262d; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+    th, td { text-align: left; padding: 11px 18px; border-bottom: 1px solid var(--border); font-size: 13px; }
+    tbody tr:last-child td { border-bottom: none; }
+    th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+    .tag { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+    .tag.rewrite { background: rgba(220,38,38,.10); color: var(--red); }
+    .tag.refactor { background: rgba(217,119,6,.12); color: var(--amber); }
+    .tag.carryforward { background: rgba(22,163,74,.10); color: var(--green); }
+    .st { font-weight: 600; }
+    .st.live { color: var(--green); }
+    .st.planned { color: var(--accent); }
+    .st.backlog { color: var(--muted); }
+    .bar { height: 7px; border-radius: 999px; background: var(--track); overflow: hidden; margin-top: 6px; }
+    .bar > i { display: block; height: 100%; background: linear-gradient(90deg,#2563eb,#16a34a); }
+    .pass { color: var(--green); font-weight: 650; }
+    .stat { display: flex; justify-content: space-between; padding: 11px 18px; border-bottom: 1px solid var(--border); }
+    .stat:last-child { border-bottom: none; }
+    .stat .l { color: var(--muted); }
+    .stat .v { font-weight: 650; font-variant-numeric: tabular-nums; }
+    .foot { color: var(--muted); font-size: 12px; margin-top: 32px; }
+    code { background: #eef2f7; padding: 1px 6px; border-radius: 5px; font-size: 12px; }
   </style>
 </head>
 <body>
   <header>
-    <h1>Oracle&nbsp;&rarr;&nbsp;PostgreSQL Modernization — Devin activity &amp; audit</h1>
-    <div class="sub" id="sub"></div>
+    <div class="brand">
+      <div class="logo"></div>
+      <div>
+        <h1>Order-to-Cash Modernization — Operations Dashboard</h1>
+        <div class="phase" id="phase"></div>
+      </div>
+    </div>
   </header>
+
   <div class="wrap">
-    <div class="cards" id="cards"></div>
+    <section>
+      <h2>Program KPIs</h2>
+      <div class="kpis" id="kpis"></div>
+    </section>
 
-    <h2>Journey portfolio (Jira L8N2)</h2>
-    <table id="epics"><thead><tr>
-      <th>Epic</th><th>Journey</th><th>Disposition</th><th>Oracle coupling</th>
-    </tr></thead><tbody></tbody></table>
+    <section class="grid2">
+      <div class="panel">
+        <div class="hd">Migration portfolio — user journeys</div>
+        <table id="portfolio"><thead><tr>
+          <th>Journey</th><th>Disposition</th><th>Status</th><th style="width:170px">Progress</th>
+        </tr></thead><tbody></tbody></table>
+      </div>
+      <div class="panel">
+        <div class="hd" id="svc-hd">Live service health</div>
+        <div id="service"></div>
+      </div>
+    </section>
 
-    <h2>Devin sessions — modernization demo</h2>
-    <table id="sessions"><thead><tr>
-      <th>Session</th><th>Lane</th><th>Trigger</th><th class="num">ACUs</th><th>PR</th><th>SonarCloud</th><th>Jira</th>
-    </tr></thead><tbody></tbody></table>
-
-    <h2>Audit trail — pre-repoint runs (tidied)</h2>
-    <div class="sub">Early cascade runs before the Slack&rarr;Devin automation was repointed from <code>event-driven-devin</code> to <code>idempiere</code>/L8N2. Retained for a complete audit trail.</div>
-    <table id="pre" style="margin-top:10px"><thead><tr>
-      <th>Session</th><th class="num">ACUs</th><th>PR</th>
-    </tr></thead><tbody></tbody></table>
+    <section class="grid2">
+      <div class="panel">
+        <div class="hd">Data-migration parity — Oracle vs PostgreSQL</div>
+        <table id="parity"><thead><tr>
+          <th>Check</th><th>Records compared</th><th>Result</th>
+        </tr></thead><tbody></tbody></table>
+      </div>
+      <div class="panel">
+        <div class="hd" id="del-hd">Delivery quality</div>
+        <div id="delivery"></div>
+      </div>
+    </section>
 
     <div class="foot" id="foot"></div>
   </div>
 
   <script src="data.js"></script>
   <script>
-    const m = window.DEMO_METRICS;
-    const S = "https://app.devin.ai/sessions/";
-    const shortId = id => id.slice(0, 8);
-    const dispClass = d => d.toLowerCase().replace(/[^a-z-]/g, "");
+    const d = window.DASHBOARD;
+    const el = id => document.getElementById(id);
+    const cls = s => s.toLowerCase().replace(/[^a-z]/g, "");
 
-    document.getElementById("sub").textContent =
-      m.window + " · snapshot " + m.generatedAt;
+    el("phase").textContent = d.phase;
 
-    const totalAcus = m.sessions.reduce((s, x) => s + (x.acus || 0), 0)
-      + m.preRepoint.reduce((s, x) => s + (x.acus || 0), 0);
-    const idemPrs = m.sessions.filter(s => s.pr && s.pr.repo === "COG-GTM/idempiere");
-    const sonarRun = m.sessions.filter(s => s.sonar === "passed").length;
+    el("kpis").innerHTML = d.kpis.map(k => {
+      const good = /-9|within|stable|on track|\+/.test(k.trend);
+      return `<div class="kpi"><div class="l">${k.label}</div>
+        <div class="v">${k.value}</div><div class="s">${k.sub}</div>
+        <div class="t ${good ? "good" : ""}">${k.trend}</div></div>`;
+    }).join("");
 
-    const cards = [
-      ["Sessions", m.sessions.length + m.preRepoint.length],
-      ["ACUs consumed", totalAcus.toFixed(1)],
-      ["idempiere PRs", idemPrs.length],
-      ["Sonar gates passed", sonarRun],
-      ["Journey epics", m.epics.length]
-    ];
-    document.getElementById("cards").innerHTML = cards.map(
-      ([l, n]) => `<div class="card"><div class="n">${n}</div><div class="l">${l}</div></div>`
-    ).join("");
+    const statusClass = s => cls(s.split(" ")[0]);
+    document.querySelector("#portfolio tbody").innerHTML = d.portfolio.map(p => `
+      <tr>
+        <td><strong>${p.journey}</strong><br><span style="color:var(--muted);font-size:12px">${p.note}</span></td>
+        <td><span class="tag ${cls(p.disposition)}">${p.disposition}</span></td>
+        <td><span class="st ${statusClass(p.status)}">${p.status}</span></td>
+        <td>${p.progress}%<div class="bar"><i style="width:${p.progress}%"></i></div></td>
+      </tr>`).join("");
 
-    document.querySelector("#epics tbody").innerHTML = m.epics.map(e => `
-      <tr><td><code>${e.key}</code></td><td>${e.journey}</td>
-      <td><span class="pill ${dispClass(e.disposition)}">${e.disposition}</span></td>
-      <td>${e.coupling}</td></tr>`).join("");
+    el("svc-hd").textContent = `Live service health — ${d.service.name}`;
+    el("service").innerHTML = d.service.metrics.map(m =>
+      `<div class="stat"><span class="l">${m.label}</span><span class="v">${m.value}</span></div>`).join("");
 
-    const prCell = pr => pr
-      ? `<a href="https://github.com/${pr.repo}/pull/${pr.number}" target="_blank">#${pr.number}</a> <span class="pill ${pr.state}">${pr.state}</span>`
-      : "—";
-    const sonarCell = s => {
-      if (s === "passed") return `<span class="pill pass">passed</span>`;
-      if (s === "running") return `<span class="pill run">running</span>`;
-      if (s === "—") return "—";
-      return `<span class="pill na">n/a</span>`;
-    };
-    document.querySelector("#sessions tbody").innerHTML = m.sessions.map(s => `
-      <tr><td><a href="${S}${s.id}" target="_blank">${s.title}</a><br><span class="sub">${shortId(s.id)}</span></td>
-      <td class="lane">${s.lane}</td><td>${s.trigger}</td>
-      <td class="num">${s.acus == null ? "—" : s.acus.toFixed(2)}</td>
-      <td>${prCell(s.pr)}</td><td>${sonarCell(s.sonar)}</td><td>${s.jira}</td></tr>`).join("");
+    document.querySelector("#parity tbody").innerHTML = d.parity.map(p => `
+      <tr><td>${p.check}</td><td>${p.records}</td>
+      <td class="pass">✓ ${p.result}</td></tr>`).join("");
 
-    document.querySelector("#pre tbody").innerHTML = m.preRepoint.map(s => `
-      <tr><td><a href="${S}${s.id}" target="_blank">${shortId(s.id)}</a></td>
-      <td class="num">${s.acus.toFixed(2)}</td><td>${s.pr}</td></tr>`).join("");
+    el("del-hd").textContent = `Delivery quality — ${d.delivery.sprint}`;
+    el("delivery").innerHTML = d.delivery.metrics.map(m =>
+      `<div class="stat"><span class="l">${m.label}</span><span class="v">${m.value}</span></div>`).join("");
 
-    document.getElementById("foot").textContent = m.note;
+    el("foot").innerHTML = `${d.program} · snapshot ${d.generatedAt}`;
   </script>
 </body>
 </html>
