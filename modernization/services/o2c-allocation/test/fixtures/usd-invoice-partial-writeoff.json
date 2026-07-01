@@ -1,0 +1,21 @@
+{
+  "scenario": "usd-invoice-partial-writeoff",
+  "description": "USD allocation 603: cash 900 + write-off 100 settles AR 1000 — exercises write-off path",
+  "allocationId": 603,
+  "seedSql": [
+    "INSERT INTO c_invoice (c_invoice_id, c_bpartner_id, c_currency_id, dateinvoiced, grandtotal) VALUES (403, 200, 100, DATE '2024-01-10', 1000.00) ON CONFLICT DO NOTHING",
+    "INSERT INTO c_payment (c_payment_id, c_bpartner_id, c_currency_id, datetrx, payamt) VALUES (503, 200, 100, DATE '2024-01-25', 900.00) ON CONFLICT DO NOTHING",
+    "INSERT INTO c_allocationhdr (c_allocationhdr_id, c_currency_id, datetrx) VALUES (603, 100, DATE '2024-01-25') ON CONFLICT DO NOTHING",
+    "INSERT INTO c_allocationline (c_allocationline_id, c_allocationhdr_id, c_invoice_id, c_payment_id, c_bpartner_id, amount, discountamt, writeoffamt) VALUES (703, 603, 403, 503, 200, 900.00, 0.00, 100.00) ON CONFLICT DO NOTHING"
+  ],
+  "expected": {
+    "totalDebit": 1000.00,
+    "totalCredit": 1000.00,
+    "balanced": true,
+    "lines": [
+      { "acctType": "UnallocatedCash", "dr": 900.00, "cr": 0.00 },
+      { "acctType": "WriteOff", "dr": 100.00, "cr": 0.00 },
+      { "acctType": "Receivable", "dr": 0.00, "cr": 1000.00 }
+    ]
+  }
+}
