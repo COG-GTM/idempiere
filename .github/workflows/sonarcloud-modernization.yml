@@ -4,6 +4,9 @@ name: SonarCloud (modernization)
 # modernization/). This is the gate that runs on the auto-PRs Devin opens when it
 # triages an o2c-allocation incident — it is intentionally fast (no Maven/Tycho
 # build). The full Java analysis lives in sonarqube.yml (manual-dispatch only).
+# sonar.qualitygate.wait=true makes the job BLOCK on the SonarCloud quality gate:
+# a failing gate fails this check (red), so a follow-up fix commit is required to
+# turn it green — the visible fail -> self-heal loop.
 on:
   pull_request:
     paths:
@@ -35,3 +38,4 @@ jobs:
             -Dsonar.sources=modernization
             -Dsonar.exclusions=**/node_modules/**,**/dist/**,modernization/journey-map/dist/**
             -Dsonar.sourceEncoding=UTF-8
+            -Dsonar.qualitygate.wait=true
