@@ -29,5 +29,3 @@ Data-estate volumes and the downstream registry are mocked (`journey_data.py`, `
 - `.github/workflows/sonarqube.yml` — the project's existing full SonarCloud analysis (manual dispatch).
 
 *Reproducible via the "Legacy migration — plan & start" Devin playbook.*
-
-<!-- sonar decoration probe 2 -->
