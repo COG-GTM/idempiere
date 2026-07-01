@@ -19,19 +19,99 @@ jobs:
   sonarcloud:
     name: Analyze modernization/
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # full history for accurate new-code detection
       - name: SonarCloud scan
+        id: scan
         uses: SonarSource/sonarqube-scan-action@v4
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
         with:
           args: >
-            -Dsonar.projectKey=${{ vars.sonarProjectKey }}
+            -Dsonar.projectKey=cogleighton-edd_idempiere-demo
             -Dsonar.organization=${{ vars.sonarOrganization }}
             -Dsonar.sources=modernization
             -Dsonar.exclusions=**/node_modules/**,**/dist/**,modernization/journey-map/dist/**
             -Dsonar.sourceEncoding=UTF-8
+            -Dsonar.qualitygate.wait=true
+
+      - name: Post SonarQube report on the PR
+        if: always() && github.event_name == 'pull_request'
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+          PROJECT: cogleighton-edd_idempiere-demo
+        run: |
+          set -euo pipefail
+          gate_json=$(curl -sf -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/qualitygates/project_status?projectKey=$PROJECT&pullRequest=$PR" || echo '{}')
+          status=$(echo "$gate_json" | jq -r '.projectStatus.status // "NONE"')
+          case "$status" in
+            OK) badge="✅ **Quality Gate: PASSED**" ;;
+            ERROR) badge="❌ **Quality Gate: FAILED**" ;;
+            *) badge="⚪ **Quality Gate: $status**" ;;
+          esac
+          conditions=$(echo "$gate_json" | jq -r '.projectStatus.conditions[]? | "| \(.metricKey) | \(.status) | \(.actualValue // "-") | \(.comparator) \(.errorThreshold) |"')
+          measures=$(curl -sf -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/measures/component?component=$PROJECT&pullRequest=$PR&metricKeys=new_bugs,new_vulnerabilities,new_code_smells,new_security_hotspots,new_duplicated_lines_density" \
+            | jq -r '.component.measures[]? | "| \(.metric) | \(.period.value // .value // "0") |"')
+          issues=$(curl -sf -u "$SONAR_TOKEN:" "https://sonarcloud.io/api/issues/search?componentKeys=$PROJECT&pullRequest=$PR&resolved=false&ps=10&s=SEVERITY&asc=false" \
+            | jq -r '.issues[]? | "- **\(.severity)** [\(.rule)] \(.message) — `\(.component | split(":") | last)`" + (if .line then " L\(.line)" else "" end)')
+          dash="https://sonarcloud.io/dashboard?id=$PROJECT&pullRequest=$PR"
+          {
+            echo "<!-- sonarqube-report -->"
+            echo "## SonarQube Analysis"
+            echo ""
+            echo "$badge — [full report]($dash)"
+            echo ""
+            if [ -n "$conditions" ]; then
+              echo "| Condition | Status | Actual | Threshold |"
+              echo "|---|---|---|---|"
+              echo "$conditions"
+              echo ""
+            fi
+            if [ -n "$measures" ]; then
+              echo "| New-code metric | Value |"
+              echo "|---|---|"
+              echo "$measures"
+              echo ""
+            fi
+            if [ -n "$issues" ]; then
+              echo "<details><summary>Open issues on new code</summary>"
+              echo ""
+              echo "$issues"
+              echo ""
+              echo "</details>"
+            else
+              echo "_No open issues on new code._"
+            fi
+          } > /tmp/sonar_comment.md
+          existing=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --paginate \
+            --jq '.[] | select(.body | startswith("<!-- sonarqube-report -->")) | .id' | head -1)
+          if [ -n "$existing" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$existing" -F body=@/tmp/sonar_comment.md
+          else
+            gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -F body=@/tmp/sonar_comment.md
+          fi
+
+      - name: Trigger Devin on quality-gate failure
+        if: always() && steps.scan.outcome == 'failure' && github.event_name == 'pull_request'
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_INCOMING_WEBHOOK_URL }}
+          PR: ${{ github.event.pull_request.number }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          SLACK_WEBHOOK="$(printf '%s' "$SLACK_WEBHOOK" | tr -d '[:space:]')"
+          payload=$(jq -n --arg text "🔴 SonarQube quality gate FAILED on PR #$PR — \"$PR_TITLE\" (branch \`$BRANCH\`)
+          $PR_URL
+          Full report: https://sonarcloud.io/dashboard?id=cogleighton-edd_idempiere-demo&pullRequest=$PR
+          Devin: please investigate the failed quality gate, fix the offending code on the PR branch, and push until the gate passes." '{text: $text}')
+          curl -sf -X POST -H 'Content-Type: application/json' -d "$payload" "$SLACK_WEBHOOK"
