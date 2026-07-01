@@ -25,27 +25,17 @@ function loadGolden() {
   return JSON.parse(fs.readFileSync(GOLDEN_PATH, 'utf8'));
 }
 
-// Compare the posted GL for allocation 600 against its golden lines.
-function verifyAllocation600(actualRows, goldenRows) {
-  const diffs = [];
-  for (const g of goldenRows) {
-    const a = actualRows.find((r) => r.record_id === g.record_id && r.account_id === g.account_id);
-    if (!a) {
-      diffs.push(`missing GL line: alloc=${g.record_id} account=${g.account_id}`);
-      continue;
-    }
-    if (Math.abs(Number(a.amtacctdr) - Number(g.amtacctdr)) > TOLERANCE) {
-      diffs.push(`debit mismatch: alloc=${g.record_id} account=${g.account_id} got ${Number(a.amtacctdr).toFixed(2)} want ${Number(g.amtacctdr).toFixed(2)}`);
-    }
-    if (Math.abs(Number(a.amtacctcr) - Number(g.amtacctcr)) > TOLERANCE) {
-      diffs.push(`credit mismatch: alloc=${g.record_id} account=${g.account_id} got ${Number(a.amtacctcr).toFixed(2)} want ${Number(g.amtacctcr).toFixed(2)}`);
-    }
+// Compare one accounting-currency amount (debit or credit) against golden.
+function fieldDiff(field, label, actual, golden) {
+  if (Math.abs(Number(actual[field]) - Number(golden[field])) > TOLERANCE) {
+    return `${label} mismatch: alloc=${golden.record_id} account=${golden.account_id} `
+      + `got ${Number(actual[field]).toFixed(2)} want ${Number(golden[field]).toFixed(2)}`;
   }
-  return diffs;
+  return null;
 }
 
-// Compare the posted GL for allocation 601 against its golden lines.
-function verifyAllocation601(actualRows, goldenRows) {
+// Compare the posted GL against its golden lines. Works for any allocation set.
+function verifyAllocation(actualRows, goldenRows) {
   const diffs = [];
   for (const g of goldenRows) {
     const a = actualRows.find((r) => r.record_id === g.record_id && r.account_id === g.account_id);
@@ -53,11 +43,9 @@ function verifyAllocation601(actualRows, goldenRows) {
       diffs.push(`missing GL line: alloc=${g.record_id} account=${g.account_id}`);
       continue;
     }
-    if (Math.abs(Number(a.amtacctdr) - Number(g.amtacctdr)) > TOLERANCE) {
-      diffs.push(`debit mismatch: alloc=${g.record_id} account=${g.account_id} got ${Number(a.amtacctdr).toFixed(2)} want ${Number(g.amtacctdr).toFixed(2)}`);
-    }
-    if (Math.abs(Number(a.amtacctcr) - Number(g.amtacctcr)) > TOLERANCE) {
-      diffs.push(`credit mismatch: alloc=${g.record_id} account=${g.account_id} got ${Number(a.amtacctcr).toFixed(2)} want ${Number(g.amtacctcr).toFixed(2)}`);
+    for (const [field, label] of [['amtacctdr', 'debit'], ['amtacctcr', 'credit']]) {
+      const diff = fieldDiff(field, label, a, g);
+      if (diff) diffs.push(diff);
     }
   }
   return diffs;
@@ -88,12 +76,7 @@ async function run() {
     [golden.ad_table_id],
   );
 
-  const golden600 = golden.lines.filter((l) => l.record_id === 600);
-  const golden601 = golden.lines.filter((l) => l.record_id === 601);
-  const diffs = [
-    ...verifyAllocation600(rows, golden600),
-    ...verifyAllocation601(rows, golden601),
-  ];
+  const diffs = verifyAllocation(rows, golden.lines);
 
   const ok = parity.ok && diffs.length === 0;
   if (diffs.length > 0) {
@@ -112,4 +95,4 @@ if (require.main === module) {
     .catch((e) => { console.error('[parity] harness error:', e.message); process.exit(2); });
 }
 
-module.exports = { run, verifyAllocation600, verifyAllocation601, loadGolden };
+module.exports = { run, verifyAllocation, fieldDiff, loadGolden };
