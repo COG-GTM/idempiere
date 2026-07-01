@@ -55,14 +55,11 @@ app.post('/allocations/:id/post', async (req, res, next) => {
   }
 });
 
-// Deliberately-slow GL reconciliation. Latency grows with ledger "size" (a
-// dropped-index migration artifact); emits o2c.allocation.posting.duration that
-// the Datadog latency monitor alerts on. The service does not alert itself.
+// GL reconciliation — re-derives per-allocation balances from fact_acct using
+// the idx_fact_acct_record index. Emits o2c.allocation.posting.duration.
 app.post('/allocations/recompute', async (req, res, next) => {
   try {
-    const scale = req.body && Number.isFinite(Number(req.body.scale))
-      ? Number(req.body.scale) : undefined;
-    const result = await recomputeBalances({ scale });
+    const result = await recomputeBalances();
     res.json(result);
   } catch (e) { next(e); }
 });
