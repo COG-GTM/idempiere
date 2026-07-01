@@ -7,6 +7,7 @@
   "scripts": {
     "start": "node src/server.js",
     "migrate": "node src/migrate.js",
+    "parity:harness": "node scripts/parity-harness.js",
     "test": "node --test"
   },
   "engines": {

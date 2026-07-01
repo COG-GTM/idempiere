@@ -1,0 +1,13 @@
+{
+  "description": "Golden GL (Fact_Acct) output for the O2C allocation posting slice, captured from the Oracle-era accounting the migrated PostgreSQL code must reproduce exactly. amtacctdr/amtacctcr are the accounting-currency (USD) debit/credit per line.",
+  "ad_table_id": 735,
+  "allocations": [600, 601],
+  "lines": [
+    { "record_id": 600, "account_id": 300, "acct_type": "Receivable",      "amtacctdr": "0.00",   "amtacctcr": "1000.00" },
+    { "record_id": 600, "account_id": 301, "acct_type": "UnallocatedCash",  "amtacctdr": "980.00", "amtacctcr": "0.00" },
+    { "record_id": 600, "account_id": 302, "acct_type": "DiscountExp",      "amtacctdr": "20.00",  "amtacctcr": "0.00" },
+    { "record_id": 601, "account_id": 300, "acct_type": "Receivable",      "amtacctdr": "0.00",   "amtacctcr": "550.00" },
+    { "record_id": 601, "account_id": 301, "acct_type": "UnallocatedCash",  "amtacctdr": "525.00", "amtacctcr": "0.00" },
+    { "record_id": 601, "account_id": 305, "acct_type": "RealizedLoss",     "amtacctdr": "25.00",  "amtacctcr": "0.00" }
+  ]
+}
