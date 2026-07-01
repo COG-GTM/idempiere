@@ -30,7 +30,7 @@ jobs:
           SONAR_HOST_URL: https://sonarcloud.io
         with:
           args: >
-            -Dsonar.projectKey=${{ vars.sonarProjectKey }}
+            -Dsonar.projectKey=cogleighton-edd_idempiere-demo
             -Dsonar.organization=${{ vars.sonarOrganization }}
             -Dsonar.sources=modernization
             -Dsonar.exclusions=**/node_modules/**,**/dist/**,modernization/journey-map/dist/**
