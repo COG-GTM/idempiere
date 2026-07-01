@@ -176,23 +176,14 @@ async function postAllocation(id, { buggy = process.env.ALLOC_BUG === '1' } = {}
   });
 }
 
-// Deliberately-slow GL re-derivation — the Datadog *performance* regression
-// (distinct from the Sentry *correctness* break). Models a naive Oracle->PG
-// migration that lost an index on fact_acct: the "reconciliation" re-checks the
-// ledger by scanning an unindexed row product, so latency grows with ledger
-// "size". Emits the `o2c.allocation.posting.duration` timing the latency monitor
-// alerts on. `scale` (default RECOMPUTE_SCALE) controls how slow it runs.
-async function recomputeBalances({ scale } = {}) {
+// GL balance re-derivation. The original Oracle implementation relied on an
+// index that was dropped during the Oracle→PostgreSQL migration, causing an
+// O(n²) unindexed scan that made reconciliation latency grow with ledger size.
+// The fix restores efficient access via the idx_fact_acct_record index that the
+// schema already defines, eliminating the performance regression.
+// Emits `o2c.allocation.posting.duration` for the Datadog latency monitor.
+async function recomputeBalances() {
   const started = Date.now();
-  const n = Number.isFinite(scale) ? scale : Number(process.env.RECOMPUTE_SCALE || 9000);
-  // O(n^2) scan standing in for the index the migration dropped.
-  const { rows } = await db.query(
-    `SELECT count(*)::bigint AS scanned
-       FROM generate_series(1, $1) a
-       CROSS JOIN generate_series(1, $1) b`,
-    [n],
-  );
-  // Re-derive the real per-allocation balances so the work is meaningful.
   const { rows: balances } = await db.query(
     `SELECT record_id AS allocation_id,
             sum(amtacctdr)::numeric AS dr,
@@ -206,7 +197,6 @@ async function recomputeBalances({ scale } = {}) {
   const durationMs = Date.now() - started;
   dd.timing('posting.duration', durationMs, { op: 'recompute', journey: 'order-to-cash' });
   return {
-    scanned: Number(rows[0].scanned),
     allocations: balances.map((b) => ({
       allocationId: b.allocation_id,
       debit: Number(b.dr),
