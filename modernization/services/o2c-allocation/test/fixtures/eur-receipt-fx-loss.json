@@ -1,0 +1,16 @@
+{
+  "scenario": "eur-receipt-fx-loss",
+  "description": "EUR allocation 601: EUR 500 receipt at rate 1.05 settles AR booked at 1.10 — realized FX loss 25.00",
+  "allocationId": 601,
+  "seedSql": [],
+  "expected": {
+    "totalDebit": 550.00,
+    "totalCredit": 550.00,
+    "balanced": true,
+    "lines": [
+      { "acctType": "UnallocatedCash", "dr": 525.00, "cr": 0.00 },
+      { "acctType": "RealizedLoss", "dr": 25.00, "cr": 0.00 },
+      { "acctType": "Receivable", "dr": 0.00, "cr": 550.00 }
+    ]
+  }
+}
