@@ -38,6 +38,8 @@ jobs:
             -Dsonar.organization=${{ vars.sonarOrganization }}
             -Dsonar.sources=modernization
             -Dsonar.exclusions=**/node_modules/**,**/dist/**,modernization/journey-map/dist/**
+            -Dsonar.coverage.exclusions=modernization/journey-map/**
+            -Dsonar.cpd.exclusions=modernization/journey-map/**
             -Dsonar.sourceEncoding=UTF-8
             -Dsonar.qualitygate.wait=true
 

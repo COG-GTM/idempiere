@@ -28,16 +28,37 @@ body {
 .tab__dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 .body { flex: 1; display: flex; min-height: 0; }
 .canvas { flex: 1; min-width: 0; }
-.panel { width: 340px; background: var(--panel); padding: 18px; overflow-y: auto; border-left: 1px solid #334155; }
+.panel { width: 420px; background: var(--panel); padding: 18px; overflow-y: auto; border-left: 1px solid #334155; }
 .panel__badge { display: inline-block; color: #fff; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; text-transform: uppercase; letter-spacing: .04em; }
 .panel h2 { margin: 10px 0 6px; font-size: 18px; }
 .panel h3 { margin: 18px 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
 .panel__summary, .panel__rationale { font-size: 13px; line-height: 1.5; color: #cbd5e1; }
+.panel__note { font-size: 12px; line-height: 1.5; color: #cbd5e1; margin: 4px 0 10px; }
 .metrics { width: 100%; border-collapse: collapse; font-size: 13px; }
 .metrics td { padding: 5px 0; border-bottom: 1px solid #334155; vertical-align: top; }
 .metrics td:first-child { color: var(--muted); width: 42%; }
+.panel-card, .seam, .node-detail { margin-top: 14px; background: #0b1220; border: 1px solid #334155; border-radius: 8px; padding: 12px; }
+.panel-card__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.panel-card__head h3 { margin: 0; }
+.panel-card__badge { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #e2e8f0; background: #1e293b; border: 1px solid #475569; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.approach { margin: 10px 0 0; padding-left: 18px; }
+.approach__item + .approach__item { margin-top: 10px; }
+.approach__top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.approach__title { font-weight: 600; font-size: 13px; color: var(--text); }
+.approach__effort { display: inline-flex; align-items: center; justify-content: center; min-width: 26px; padding: 2px 7px; border-radius: 999px; background: #1d4ed8; color: #fff; font-size: 10px; font-weight: 700; letter-spacing: .03em; }
+.approach__item p { margin: 5px 0 0; font-size: 12px; line-height: 1.45; color: #cbd5e1; }
+.seam { padding: 0; }
+.seam summary { list-style: none; cursor: pointer; padding: 12px 12px 10px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.seam summary::-webkit-details-marker { display: none; }
+.seam summary span { color: #7dd3fc; font-weight: 600; text-transform: none; letter-spacing: 0; }
+.seam > .panel__note, .seam > .constructs { margin-left: 12px; margin-right: 12px; }
+.constructs { width: 100%; border-collapse: collapse; font-size: 12px; }
+.constructs th, .constructs td { padding: 8px 6px; border-top: 1px solid #334155; vertical-align: top; text-align: left; }
+.constructs th { color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.constructs__name { font-weight: 700; color: #e2e8f0; white-space: nowrap; }
 .node-detail { margin-top: 14px; background: #0b1220; border: 1px solid #334155; border-radius: 8px; padding: 12px; }
 .node-detail h3 { margin-top: 0; color: var(--text); text-transform: none; letter-spacing: 0; font-size: 14px; }
+.node-detail__action { margin: 6px 0 10px; font-size: 12px; line-height: 1.5; color: #dbeafe; }
 .node-detail ul { margin: 6px 0; padding-left: 16px; font-size: 13px; }
 .node-detail .oracle { color: #fca5a5; }
 .src-link { color: #60a5fa; font-size: 13px; text-decoration: none; }
@@ -52,6 +73,9 @@ code { background: #0b1220; padding: 1px 5px; border-radius: 4px; font-size: 12p
 .doc-node__table { font-size: 10px; color: var(--muted); margin-top: 2px; }
 .doc-node__lines { font-size: 10px; color: #64748b; margin-top: 2px; }
 .doc-node__flag { font-size: 10px; color: #fca5a5; font-weight: 600; margin-top: 3px; }
+.doc-node__chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.doc-node__chip { display: inline-flex; align-items: center; border-radius: 999px; padding: 2px 6px; background: rgba(37, 99, 235, 0.18); border: 1px solid rgba(96, 165, 250, 0.35); color: #bfdbfe; font-size: 9px; line-height: 1.2; }
+.doc-node__chip--more { background: rgba(51, 65, 85, 0.9); border-color: #64748b; color: #cbd5e1; }
 .node-detail__links { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 6px; }
 .src-link--alt { color: #fca5a5; }
 .app__footer { padding: 8px 24px; font-size: 11px; color: #64748b; border-top: 1px solid #334155; }
