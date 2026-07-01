@@ -109,6 +109,7 @@ jobs:
           BRANCH: ${{ github.head_ref }}
         run: |
           set -euo pipefail
+          SLACK_WEBHOOK="$(printf '%s' "$SLACK_WEBHOOK" | tr -d '[:space:]')"
           payload=$(jq -n --arg text "🔴 SonarQube quality gate FAILED on PR #$PR — \"$PR_TITLE\" (branch \`$BRANCH\`)
           $PR_URL
           Full report: https://sonarcloud.io/dashboard?id=cogleighton-edd_idempiere-demo&pullRequest=$PR
