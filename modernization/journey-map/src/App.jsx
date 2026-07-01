@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import ReactFlow, { Background, Controls, Handle, Position } from "reactflow";
 import "reactflow/dist/style.css";
-import { journeys, DISPOSITIONS, LAYERS, srcUrl } from "./journeys.js";
+import { journeys, DISPOSITIONS, LAYERS, CONVERSION_SEAM, srcUrl } from "./journeys.js";
 
 // Dark-themed per-layer accents (node text is light, so keep backgrounds dark).
 const LAYER_STYLE = {
@@ -24,12 +24,53 @@ function DocNode({ data }) {
       {data.table && <div className="doc-node__table">{data.table}</div>}
       {data.lines ? <div className="doc-node__lines">{data.lines.toLocaleString()} LOC</div> : null}
       {data.oracle && <div className="doc-node__flag">Oracle SQL ⚠</div>}
+      {data.constructs?.length ? (
+        <div className="doc-node__chips">
+          {data.constructs.slice(0, 2).map((construct) => (
+            <span key={`${data.id}-${construct.name}-${construct.line}`} className="doc-node__chip">
+              {construct.name}
+            </span>
+          ))}
+          {data.constructs.length > 2 ? <span className="doc-node__chip doc-node__chip--more">+{data.constructs.length - 2}</span> : null}
+        </div>
+      ) : null}
       <Handle type="source" position={Position.Right} />
     </div>
   );
 }
 
 const nodeTypes = { doc: DocNode };
+
+const sourceLabel = (file, line) => `${file.split("/").pop()}:${line}`;
+
+function ConstructTable({ constructs }) {
+  if (!constructs?.length) return null;
+
+  return (
+    <table className="constructs">
+      <thead>
+        <tr>
+          <th>Construct</th>
+          <th>→ Postgres action</th>
+          <th>Source</th>
+        </tr>
+      </thead>
+      <tbody>
+        {constructs.map((construct) => (
+          <tr key={`${construct.file}-${construct.line}-${construct.name}`}>
+            <td className="constructs__name">{construct.name}</td>
+            <td>{construct.action}</td>
+            <td>
+              <a className="src-link" href={srcUrl(construct.file, construct.line)} target="_blank" rel="noreferrer">
+                {sourceLabel(construct.file, construct.line)} ↗
+              </a>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
 
 export default function App() {
   const [activeId, setActiveId] = useState(journeys[0].id);
@@ -49,7 +90,7 @@ export default function App() {
       if (layer === "deployable") return 720;
       return i * 235; // document spine + posting
     };
-    const nodes = journey.nodes.map((n, i) => {
+    const nodes = journey.nodes.map((n) => {
       const peers = byLayer[n.layer];
       const idxInLayer = peers.indexOf(n);
       return {
@@ -130,9 +171,40 @@ export default function App() {
           <h3>Rationale</h3>
           <p className="panel__rationale">{journey.rationale}</p>
 
+          {journey.approach ? (
+            <section className="panel-card">
+              <div className="panel-card__head">
+                <h3>Recommended approach</h3>
+                {journey.approach.priority ? <span className="panel-card__badge">{journey.approach.priority}</span> : null}
+              </div>
+              <p className="panel__note">{journey.approach.sequencing}</p>
+              <ol className="approach">
+                {journey.approach.slices.map((step) => (
+                  <li key={step.title} className="approach__item">
+                    <div className="approach__top">
+                      <span className="approach__title">{step.title}</span>
+                      <span className="approach__effort">{step.effort}</span>
+                    </div>
+                    <p>{step.detail}</p>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          ) : null}
+
+          <details className="seam" open>
+            <summary>Oracle→PostgreSQL conversion seam <span>shared across all journeys</span></summary>
+            <p className="panel__note">
+              One runtime translation layer rewrites the Oracle-specific SQL constructs below before the journey logic reaches PostgreSQL.
+            </p>
+            <ConstructTable constructs={CONVERSION_SEAM} />
+          </details>
+
           {selected ? (
             <div className="node-detail">
               <h3>{selected.label} — <code>{selected.cls}</code></h3>
+              {selected.action ? <p className="node-detail__action">{selected.action}</p> : null}
+              <ConstructTable constructs={selected.constructs} />
               <ul>
                 {selected.table && <li>Tables: <code>{selected.table}</code></li>}
                 {selected.lines ? <li>Source size: {selected.lines.toLocaleString()} lines (measured)</li> : null}
@@ -140,9 +212,11 @@ export default function App() {
                 {selected.oracle && <li className="oracle">Oracle coupling: {selected.oracle}</li>}
               </ul>
               <div className="node-detail__links">
-                <a className="src-link" href={srcUrl(selected.file, selected.line)} target="_blank" rel="noreferrer">
-                  View source ↗
-                </a>
+                {selected.file ? (
+                  <a className="src-link" href={srcUrl(selected.file, selected.line)} target="_blank" rel="noreferrer">
+                    View source ↗
+                  </a>
+                ) : null}
                 {selected.convFile && (
                   <a className="src-link src-link--alt" href={srcUrl(selected.convFile, selected.convLine)} target="_blank" rel="noreferrer">
                     SQL conversion layer ↗
