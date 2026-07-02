@@ -1,7 +1,9 @@
+const fs = require('fs');
+const path = require('path');
 const { Pool } = require('pg');
 
-// Single shared pool. Connection comes from DATABASE_URL or discrete PG* vars,
-// so it works both in docker-compose and against a local/CI Postgres.
+const SQL_DIR = path.join(__dirname, 'sql');
+
 function isLocalHostname(hostname) {
   return hostname === 'localhost'
     || hostname === '127.0.0.1'
@@ -9,20 +11,24 @@ function isLocalHostname(hostname) {
     || hostname === '[::1]';
 }
 
-function buildPoolConfig() {
-  if (process.env.DATABASE_URL) {
-    const config = { connectionString: process.env.DATABASE_URL };
-    try {
-      const parsed = new URL(process.env.DATABASE_URL);
-      if (!isLocalHostname(parsed.hostname)) {
-        config.ssl = { rejectUnauthorized: false };
-      }
-    } catch {
-      // Leave the connection string untouched if parsing fails.
-    }
-    return config;
-  }
+function shouldUseEmbeddedDb() {
+  return !process.env.DATABASE_URL && (process.env.VERCEL || process.env.EMBED_DB === '1');
+}
 
+function buildPgPoolConfig() {
+  const config = { connectionString: process.env.DATABASE_URL };
+  try {
+    const parsed = new URL(process.env.DATABASE_URL);
+    if (!isLocalHostname(parsed.hostname)) {
+      config.ssl = { rejectUnauthorized: false };
+    }
+  } catch {
+    // Leave the connection string untouched if parsing fails.
+  }
+  return config;
+}
+
+function buildDiscretePoolConfig() {
   return {
     host: process.env.PGHOST || 'localhost',
     port: parseInt(process.env.PGPORT, 10) || 5432,
@@ -32,13 +38,83 @@ function buildPoolConfig() {
   };
 }
 
-const pool = new Pool(buildPoolConfig());
+let embeddedDb = null;
+let embeddedInitPromise = null;
+
+async function runSqlScript(target, sql) {
+  const stripped = sql.replace(/--.*$/gm, '');
+  const statements = stripped
+    .split(';')
+    .map((statement) => statement.trim())
+    .filter(Boolean);
+  for (const statement of statements) {
+    await target.query(statement);
+  }
+}
+
+async function initializeEmbeddedDb() {
+  if (!shouldUseEmbeddedDb()) return null;
+  if (!embeddedInitPromise) {
+    embeddedInitPromise = (async () => {
+      const { PGlite } = require('@electric-sql/pglite');
+      embeddedDb = new PGlite();
+      const schema = fs.readFileSync(path.join(SQL_DIR, 'schema.sql'), 'utf8');
+      const seed = fs.readFileSync(path.join(SQL_DIR, 'seed.sql'), 'utf8');
+      await runSqlScript(embeddedDb, schema);
+      await runSqlScript(embeddedDb, seed);
+      return embeddedDb;
+    })().catch((err) => {
+      embeddedInitPromise = null;
+      throw err;
+    });
+  }
+  return embeddedInitPromise;
+}
+
+const embeddedPool = {
+  async query(text, params) {
+    await initializeEmbeddedDb();
+    return embeddedDb.query(text, params);
+  },
+  async connect() {
+    await initializeEmbeddedDb();
+    return {
+      query: (text, params) => embeddedDb.query(text, params),
+      release() {},
+    };
+  },
+  async end() {
+    if (embeddedDb) {
+      await embeddedDb.close();
+      embeddedDb = null;
+      embeddedInitPromise = null;
+    }
+  },
+};
+
+const pool = shouldUseEmbeddedDb()
+  ? embeddedPool
+  : new Pool(process.env.DATABASE_URL ? buildPgPoolConfig() : buildDiscretePoolConfig());
+
+async function ensureReady() {
+  if (shouldUseEmbeddedDb()) {
+    await initializeEmbeddedDb();
+  }
+}
 
 async function query(text, params) {
+  await ensureReady();
   return pool.query(text, params);
 }
 
 async function withTransaction(fn) {
+  await ensureReady();
+  if (shouldUseEmbeddedDb()) {
+    return embeddedDb.transaction(async (tx) => fn({
+      query: (text, params) => tx.query(text, params),
+    }));
+  }
+
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -53,4 +129,11 @@ async function withTransaction(fn) {
   }
 }
 
-module.exports = { pool, query, withTransaction };
+module.exports = {
+  pool,
+  query,
+  withTransaction,
+  ensureReady,
+  runSqlScript,
+  isEmbeddedDb: shouldUseEmbeddedDb,
+};
