@@ -327,34 +327,39 @@ export const journeys = [
     rationale:
       "Mostly standard flows with coupling concentrated in matching and pricing lookups. REFACTOR in place using the existing Convert_PostgreSQL layer rather than a full rewrite.",
     approach: {
-      priority: "P1 — refactor in place",
+      priority: "P1 — refactor in place (sprint planned: L8N2-46, stories L8N2-67…72)",
       sequencing:
-        "Tighten the schema and index story first, then modernize the matching / variance seam, finish the PO-price and payment edges, and back it with a parity harness before cutover.",
+        "Sprint plan (P2P Refactor — Sprint 1): schema/index parity first, then the three-way match posting on the critical path with the deterministic last-price fix in parallel, FX/rounding right after matching, then the parity harness gates the downstream contract + observability close-out.",
       slices: [
         slice(
-          "Schema and index parity",
-          "Make the procurement tables read consistently on PostgreSQL before touching matching logic.",
+          "Schema and index parity (L8N2-67)",
+          "Port/verify DDL + indexes for the seven procurement tables so they read consistently on PostgreSQL before touching matching logic.",
           "M",
         ),
         slice(
-          "Matching and variance seam",
-          "Refactor Doc_MatchInv where the Oracle coupling concentrates so accrual and variance values stay faithful.",
+          "Three-way match posting (L8N2-68)",
+          "Refactor Doc_MatchInv accrual clearing and InvoicePriceVariance (incl. AveragePO stock-coverage split) so posted values stay faithful.",
+          "L",
+        ),
+        slice(
+          "FX gain/loss and rounding (L8N2-69)",
+          "Prove the receipt/invoice gain-loss and rounding-correction paths on the shared MConversionRate seam.",
           "M",
         ),
         slice(
-          "PO price parity",
-          "Keep the purchase-order pricing lookup and row selection behavior aligned with the Oracle-era path.",
+          "Deterministic last-price updates (L8N2-70)",
+          "Replace the Oracle-only ROWNUM=1 branches for PriceLastPO / PriceLastInv with deterministic single-row selection on both platforms.",
           "S",
         ),
         slice(
-          "Payment and settlement",
-          "Validate the AP close-out slice so payment settlement still balances against receipts and invoices.",
-          "S",
+          "Parity harness (L8N2-71)",
+          "Golden-dataset check of match balances, invoice variance, and Fact_Acct totals before widening the refactor.",
+          "M",
         ),
         slice(
-          "Parity harness",
-          "Compare match balances, invoice variance, and Fact_Acct totals before widening the refactor.",
-          "M",
+          "Downstream contract and observability (L8N2-72)",
+          "Contract checks for AP aging / supplier settlement reads plus alerting on the posting path.",
+          "S",
         ),
       ],
     },
