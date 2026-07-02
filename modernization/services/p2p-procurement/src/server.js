@@ -4,6 +4,7 @@ const db = require('./db');
 const { migrate } = require('./migrate');
 
 const app = express();
+app.disable('x-powered-by');
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
@@ -68,7 +69,7 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: err.message });
 });
 
-const PORT = parseInt(process.env.PORT, 10) || 3002;
+const PORT = Number.parseInt(process.env.PORT, 10) || 3002;
 
 async function start() {
   if (process.env.AUTO_MIGRATE !== '0') {
