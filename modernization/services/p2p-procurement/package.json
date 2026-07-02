@@ -1,0 +1,19 @@
+{
+  "name": "p2p-procurement-service",
+  "version": "1.0.0",
+  "description": "P2P procurement schema parity slice: PostgreSQL-native DDL for the 7 procurement tables (M_Requisition, C_Order, M_InOut, C_Invoice, M_MatchPO, M_MatchInv, C_Payment) with Oracle-era precision, index coverage, and sequence semantics.",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "migrate": "node src/migrate.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "pg": "^8.13.1"
+  }
+}
