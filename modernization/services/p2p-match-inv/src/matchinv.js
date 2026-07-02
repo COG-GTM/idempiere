@@ -58,18 +58,14 @@ async function readFactAcctSums(tableId, recordId, acctSchemaId, accountId) {
 
 /**
  * Read upstream Fact_Acct net (DR - CR) for a given table/record/account.
- * Uses COALESCE(SUM(...), 0) — the refactored pattern.
+ * Delegates to readFactAcctSums to avoid duplicating the query.
  */
 async function readFactAcctNet(tableId, recordId, acctSchemaId, accountId) {
-  const { rows } = await db.query(`
-    SELECT COALESCE(SUM(AmtSourceDr),0) - COALESCE(SUM(AmtSourceCr),0) AS src_net,
-           COALESCE(SUM(AmtAcctDr),0)   - COALESCE(SUM(AmtAcctCr),0)  AS acct_net
-    FROM fact_acct
-    WHERE ad_table_id = $1 AND record_id = $2
-      AND c_acctschema_id = $3 AND account_id = $4
-      AND postingtype = 'A'
-  `, [tableId, recordId, acctSchemaId, accountId]);
-  return rows[0];
+  const s = await readFactAcctSums(tableId, recordId, acctSchemaId, accountId);
+  return {
+    src_net: Number(s.src_dr) - Number(s.src_cr),
+    acct_net: Number(s.acct_dr) - Number(s.acct_cr),
+  };
 }
 
 // Account IDs from seed
@@ -94,24 +90,18 @@ function makeFactLine(acctType, accountId, amount) {
   };
 }
 
-/** Compute NIR DR amount from upstream receipt or reversal Fact_Acct. */
-async function computeNirDr(mi, acctSchemaId, multiplierReceipt, isReversal) {
+/**
+ * Read an upstream Fact_Acct amount for a reversal or a regular match.
+ * Reversals read from the original match-inv posting; regular matches read
+ * from the upstream document (receipt or invoice).
+ */
+async function computeUpstreamAmt(mi, acctSchemaId, { tableId, recordKey, accountId, field, multiplier, isReversal }) {
   if (isReversal) {
-    const origSums = await readFactAcctSums(TABLE_MATCHINV, mi.reversal_id, acctSchemaId, ACCT.NIR);
-    return Number(origSums.acct_cr);
+    const orig = await readFactAcctSums(TABLE_MATCHINV, mi.reversal_id, acctSchemaId, accountId);
+    return Number(orig[field]);
   }
-  const receiptSums = await readFactAcctSums(TABLE_INOUT, mi.m_inout_id, acctSchemaId, ACCT.NIR);
-  return Number(receiptSums.acct_cr) * multiplierReceipt;
-}
-
-/** Compute InventoryClearing CR amount from upstream invoice or reversal Fact_Acct. */
-async function computeInvClrCr(mi, acctSchemaId, multiplierInvoice, isReversal) {
-  if (isReversal) {
-    const origSums = await readFactAcctSums(TABLE_MATCHINV, mi.reversal_id, acctSchemaId, ACCT.INV_CLR);
-    return Number(origSums.acct_dr);
-  }
-  const invoiceSums = await readFactAcctSums(TABLE_INVOICE, mi.c_invoice_id, acctSchemaId, ACCT.INV_CLR);
-  return Number(invoiceSums.acct_dr) * multiplierInvoice;
+  const sums = await readFactAcctSums(tableId, mi[recordKey], acctSchemaId, accountId);
+  return Number(sums[field]) * multiplier;
 }
 
 /** Build IPV fact lines for AveragePO costing with stock-coverage split. */
@@ -158,10 +148,16 @@ async function buildFacts(mi, opts = {}) {
   const multiplierReceipt = Number(mi.qty) / Number(mi.movementqty);
   const multiplierInvoice = Number(mi.qty) / Number(mi.qtyinvoiced);
 
-  const nirDr = await computeNirDr(mi, acctSchemaId, multiplierReceipt, isReversal);
+  const nirDr = await computeUpstreamAmt(mi, acctSchemaId, {
+    tableId: TABLE_INOUT, recordKey: 'm_inout_id', accountId: ACCT.NIR,
+    field: 'acct_cr', multiplier: multiplierReceipt, isReversal,
+  });
   facts.push({ acctType: 'NotInvoicedReceipts', account_id: ACCT.NIR, dr: round2(nirDr), cr: 0 });
 
-  const invClrCr = await computeInvClrCr(mi, acctSchemaId, multiplierInvoice, isReversal);
+  const invClrCr = await computeUpstreamAmt(mi, acctSchemaId, {
+    tableId: TABLE_INVOICE, recordKey: 'c_invoice_id', accountId: ACCT.INV_CLR,
+    field: 'acct_dr', multiplier: multiplierInvoice, isReversal,
+  });
   facts.push({ acctType: 'InventoryClearing', account_id: ACCT.INV_CLR, dr: 0, cr: round2(invClrCr) });
 
   const ipv = round2(invClrCr - nirDr);
