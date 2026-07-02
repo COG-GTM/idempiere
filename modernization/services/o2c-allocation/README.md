@@ -49,6 +49,7 @@ npm install && npm run migrate && npm start
 Use `DATABASE_URL` for the managed Postgres connection, with TLS enabled by the provider (`sslmode=require`).
 For the Vercel function, set `DD_API_KEY`, `DD_SITE`, `SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `ALLOC_BUG=1`,
 and a smaller `RECOMPUTE_SCALE` such as `3000` so the recompute endpoint stays within function limits.
+Use `EMBED_DB=1` to force the same in-process database path in a local shell smoke test.
 The local docker-compose path still uses the discrete `PG*` variables and the Datadog agent.
 
 Then:

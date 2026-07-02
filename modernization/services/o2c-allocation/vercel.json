@@ -8,7 +8,7 @@
   ],
   "functions": {
     "api/index.js": {
-      "includeFiles": "{public,src}/**",
+      "includeFiles": "{public,src,node_modules/@electric-sql/pglite/dist}/**",
       "maxDuration": 60
     }
   }
