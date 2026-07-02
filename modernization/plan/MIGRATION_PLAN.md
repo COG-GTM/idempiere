@@ -48,6 +48,8 @@ radius.
 1. **Phase 0 — Foundation**: stand up Postgres target, CI/SonarCloud baseline, parity-test harness, data profiling.
 2. **Phase 1 — Carry-Forward**: Record-to-Report, Inventory (schema conversion + parity).
 3. **Phase 2 — Refactor**: Procure-to-Pay, Manufacturing (via `Convert_PostgreSQL`, fix matching SQL).
+   *P2P sprint planned* — epic `L8N2-46`, sprint "P2P Refactor — Sprint 1" (stories `L8N2-67`…`L8N2-72`);
+   runbook: [P2P Migration — Execution Runbook](https://cog-gtm.atlassian.net/wiki/spaces/~71202071a22066a9b34c1f8d24b0eb68e441a1/pages/91062273).
 4. **Phase 3 — Rewrite**: Order-to-Cash behind a strangler facade (pricing/allocation), cut over by document type.
 5. **Phase 4 — Decommission**: retire Oracle journey-by-journey once parity holds.
 
