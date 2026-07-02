@@ -7,10 +7,14 @@
   "scripts": {
     "start": "node src/server.js",
     "migrate": "node src/migrate.js",
-    "test": "node --test"
+    "test": "node --test",
+    "test:coverage": "c8 --reporter=lcov --reporter=text --reports-dir=coverage node --test"
   },
   "engines": {
     "node": ">=18"
+  },
+  "devDependencies": {
+    "c8": "10.1.2"
   },
   "dependencies": {
     "@electric-sql/pglite": "0.5.3",
