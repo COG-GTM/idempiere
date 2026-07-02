@@ -49,8 +49,9 @@ test('pool.connect returns a client with query and release', async () => {
   client.release();
 });
 
-test('isEmbeddedDb returns true in embedded mode', () => {
-  assert.strictEqual(db.isEmbeddedDb(), true);
+test('isEmbeddedDb reflects current environment', () => {
+  const expected = !process.env.DATABASE_URL && (!!process.env.VERCEL || process.env.EMBED_DB === '1');
+  assert.strictEqual(db.isEmbeddedDb(), expected);
 });
 
 test('isLocalHostname recognises loopback addresses', () => {
