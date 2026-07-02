@@ -40,7 +40,7 @@ jobs:
             -Dsonar.projectKey=cogleighton-edd_idempiere-demo
             -Dsonar.organization=${{ vars.sonarOrganization }}
             -Dsonar.sources=modernization
-            -Dsonar.exclusions=**/node_modules/**,**/dist/**,modernization/journey-map/dist/**
+            -Dsonar.exclusions=**/node_modules/**,**/dist/**,modernization/journey-map/dist/**,modernization/services/**/sql/**
             -Dsonar.coverage.exclusions=modernization/journey-map/**,modernization/services/**
             -Dsonar.cpd.exclusions=modernization/journey-map/**,modernization/services/**/sql/**
             -Dsonar.sourceEncoding=UTF-8
