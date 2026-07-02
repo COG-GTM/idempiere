@@ -26,9 +26,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # full history for accurate new-code detection
-      # qualitygate.wait blocks only on pull_request: PRs must pass the gate,
-      # but master pushes don't wait on the branch gate (the demo project has no
-      # coverage report, so a blocking wait on master can never pass).
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install o2c-allocation deps & collect coverage
+        working-directory: modernization/services/o2c-allocation
+        env:
+          EMBED_DB: "1"
+        run: npm ci && npm run test:coverage
       - name: SonarCloud scan
         id: scan
         uses: SonarSource/sonarqube-scan-action@v4
@@ -44,6 +49,7 @@ jobs:
             -Dsonar.coverage.exclusions=modernization/journey-map/**
             -Dsonar.cpd.exclusions=modernization/journey-map/**
             -Dsonar.sourceEncoding=UTF-8
+            -Dsonar.javascript.lcov.reportPaths=modernization/services/o2c-allocation/coverage/lcov.info
             -Dsonar.qualitygate.wait=${{ github.event_name == 'pull_request' }}
 
       - name: Post SonarQube report on the PR
