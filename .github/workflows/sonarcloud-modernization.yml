@@ -41,7 +41,7 @@ jobs:
             -Dsonar.organization=${{ vars.sonarOrganization }}
             -Dsonar.sources=modernization
             -Dsonar.exclusions=**/node_modules/**,**/dist/**,modernization/journey-map/dist/**
-            -Dsonar.coverage.exclusions=modernization/journey-map/**,modernization/services/**/sql/**,modernization/services/**/test/**
+            -Dsonar.coverage.exclusions=modernization/journey-map/**,modernization/services/**
             -Dsonar.cpd.exclusions=modernization/journey-map/**,modernization/services/**/sql/**
             -Dsonar.sourceEncoding=UTF-8
             -Dsonar.qualitygate.wait=${{ github.event_name == 'pull_request' }}
