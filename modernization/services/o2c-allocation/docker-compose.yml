@@ -31,8 +31,7 @@ services:
       # emits to Sentry + Datadog; alerting to Slack is owned by those tools.
       SENTRY_DSN: ${SENTRY_DSN:-}
       DD_AGENT_HOST: datadog-agent
-      # Flip to "1" to arm the seeded regression (multi-currency postings break):
-      ALLOC_BUG: ${ALLOC_BUG:-0}
+
     ports:
       - "3001:3001"
 
