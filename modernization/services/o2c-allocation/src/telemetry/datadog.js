@@ -8,6 +8,13 @@ let agentless = false;
 let baseTags = {};
 let baseTagArray = [];
 let metricPrefix = 'o2c.allocation.';
+let waitUntil = null;
+
+try {
+  ({ waitUntil } = require('@vercel/functions'));
+} catch {
+  waitUntil = null;
+}
 
 function normalizeTagValue(value) {
   if (value == null) return '';
@@ -35,7 +42,7 @@ function postSeries(series) {
   const site = process.env.DD_SITE || 'datadoghq.com';
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 1500);
-  void fetch(`https://api.${site}/api/v2/series`, {
+  const request = fetch(`https://api.${site}/api/v2/series`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -48,14 +55,28 @@ function postSeries(series) {
       console.warn('[datadog] HTTP intake error:', error.message);
     })
     .finally(() => clearTimeout(timeout));
+  if (process.env.VERCEL && typeof waitUntil === 'function') {
+    try {
+      waitUntil(request);
+    } catch {
+      // Fall back to the current fire-and-forget behavior if the runtime refuses.
+    }
+  }
 }
+
+const SERIES_TYPE = {
+  unspecified: 0,
+  count: 1,
+  rate: 2,
+  gauge: 3,
+};
 
 function emitAgentless(metric, type, value, tags, { timing = false } = {}) {
   const series = [buildSeries(metric, type, value, tags)];
   if (timing) {
     const suffixes = ['.avg', '.max', '.median', '.95percentile', '.count'];
     for (const suffix of suffixes) {
-      series.push(buildSeries(`${metric}${suffix}`, 'gauge', suffix === '.count' ? 1 : value, tags));
+      series.push(buildSeries(`${metric}${suffix}`, suffix === '.count' ? SERIES_TYPE.count : SERIES_TYPE.gauge, suffix === '.count' ? 1 : value, tags));
     }
   }
   postSeries(series);
@@ -115,7 +136,7 @@ function increment(metric, tags) {
     dogstatsd.increment(metric, 1, tags);
     return;
   }
-  if (agentless) emitAgentless(metric, 'count', 1, tags);
+  if (agentless) emitAgentless(metric, SERIES_TYPE.count, 1, tags);
 }
 
 function gauge(metric, value, tags) {
@@ -123,7 +144,7 @@ function gauge(metric, value, tags) {
     dogstatsd.gauge(metric, value, tags);
     return;
   }
-  if (agentless) emitAgentless(metric, 'gauge', value, tags);
+  if (agentless) emitAgentless(metric, SERIES_TYPE.gauge, value, tags);
 }
 
 // Histogram timing (ms). Datadog derives .avg/.95percentile/.max from this,
@@ -133,7 +154,7 @@ function timing(metric, valueMs, tags) {
     dogstatsd.timing(metric, valueMs, tags);
     return;
   }
-  if (agentless) emitAgentless(metric, 'gauge', valueMs, tags, { timing: true });
+  if (agentless) emitAgentless(metric, SERIES_TYPE.gauge, valueMs, tags, { timing: true });
 }
 
 module.exports = { initDatadog, increment, gauge, timing };
