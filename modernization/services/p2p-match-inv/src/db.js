@@ -1,5 +1,5 @@
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const path = require('node:path');
 const { Pool } = require('pg');
 
 const SQL_DIR = path.join(__dirname, 'sql');
@@ -13,7 +13,7 @@ const pool = new Pool({
 });
 
 async function runSqlScript(target, sql) {
-  const stripped = sql.replace(/--.*$/gm, '');
+  const stripped = sql.replace(/--[^\n]*/g, '');
   const statements = stripped
     .split(';')
     .map((s) => s.trim())

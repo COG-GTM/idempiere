@@ -1,5 +1,8 @@
 -- Seed data for P2P match-invoice parity tests.
 -- Golden dataset: deterministic test scenarios for the four acceptance criteria.
+-- Idempotent: truncate fact_acct and re-seed on every run.
+
+TRUNCATE fact_acct RESTART IDENTITY CASCADE;
 
 -- Currencies
 INSERT INTO c_currency VALUES (100, 'USD', 2) ON CONFLICT DO NOTHING;

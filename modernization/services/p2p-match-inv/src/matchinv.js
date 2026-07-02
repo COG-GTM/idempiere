@@ -81,6 +81,64 @@ const ACCT = {
   AVG_COST_VAR: 5,
 };
 
+function round2(n) {
+  return Math.round(n * 100) / 100;
+}
+
+function makeFactLine(acctType, accountId, amount) {
+  return {
+    acctType,
+    account_id: accountId,
+    dr: amount > 0 ? amount : 0,
+    cr: amount < 0 ? -amount : 0,
+  };
+}
+
+/** Compute NIR DR amount from upstream receipt or reversal Fact_Acct. */
+async function computeNirDr(mi, acctSchemaId, multiplierReceipt, isReversal) {
+  if (isReversal) {
+    const origSums = await readFactAcctSums(TABLE_MATCHINV, mi.reversal_id, acctSchemaId, ACCT.NIR);
+    return Number(origSums.acct_cr);
+  }
+  const receiptSums = await readFactAcctSums(TABLE_INOUT, mi.m_inout_id, acctSchemaId, ACCT.NIR);
+  return Number(receiptSums.acct_cr) * multiplierReceipt;
+}
+
+/** Compute InventoryClearing CR amount from upstream invoice or reversal Fact_Acct. */
+async function computeInvClrCr(mi, acctSchemaId, multiplierInvoice, isReversal) {
+  if (isReversal) {
+    const origSums = await readFactAcctSums(TABLE_MATCHINV, mi.reversal_id, acctSchemaId, ACCT.INV_CLR);
+    return Number(origSums.acct_dr);
+  }
+  const invoiceSums = await readFactAcctSums(TABLE_INVOICE, mi.c_invoice_id, acctSchemaId, ACCT.INV_CLR);
+  return Number(invoiceSums.acct_dr) * multiplierInvoice;
+}
+
+/** Build IPV fact lines for AveragePO costing with stock-coverage split. */
+function buildAveragePOIpvLines(ipv, mi, opts) {
+  const lines = [];
+  const qtyMatched = Math.abs(Number(mi.qty));
+  const qtyCost = opts.costingQty != null ? opts.costingQty : qtyMatched;
+
+  let amtAsset;
+  let amtVariance;
+  if (qtyCost < qtyMatched) {
+    amtAsset = round2(qtyCost * ipv / qtyMatched);
+    amtVariance = round2(ipv - amtAsset);
+  } else {
+    amtAsset = ipv;
+    amtVariance = 0;
+  }
+
+  if (amtAsset !== 0) {
+    lines.push(makeFactLine('Asset', ACCT.ASSET, amtAsset));
+  }
+  if (amtVariance !== 0) {
+    lines.push(makeFactLine('AverageCostVariance', ACCT.AVG_COST_VAR, amtVariance));
+  }
+  return lines;
+}
+
 /**
  * Build the match-invoice posting facts.
  *
@@ -91,82 +149,27 @@ const ACCT = {
  *
  * @param {object} mi - loaded match-inv record
  * @param {object} opts - { acctSchemaId, costingQty } for AveragePO stock coverage
- * @returns {{ facts, balanced, debit, credit }}
+ * @returns {Promise<{ facts: Array, balanced: boolean, debit: number, credit: number }>}
  */
 async function buildFacts(mi, opts = {}) {
   const acctSchemaId = opts.acctSchemaId || 1;
   const facts = [];
-
+  const isReversal = mi.reversal_id != null && mi.reversal_id > 0;
   const multiplierReceipt = Number(mi.qty) / Number(mi.movementqty);
   const multiplierInvoice = Number(mi.qty) / Number(mi.qtyinvoiced);
 
-  const isReversal = mi.reversal_id != null && mi.reversal_id > 0;
-
-  // --- NotInvoicedReceipts DR (from receipt upstream posting) ---
-  let nirDr;
-  if (isReversal) {
-    // Reversal: re-read from original match-inv's Fact_Acct
-    const origSums = await readFactAcctSums(TABLE_MATCHINV, mi.reversal_id, acctSchemaId, ACCT.NIR);
-    nirDr = Number(origSums.acct_cr) * 1;  // reverse: swap DR/CR
-  } else {
-    const receiptSums = await readFactAcctSums(TABLE_INOUT, mi.m_inout_id, acctSchemaId, ACCT.NIR);
-    nirDr = Number(receiptSums.acct_cr) * multiplierReceipt;
-  }
+  const nirDr = await computeNirDr(mi, acctSchemaId, multiplierReceipt, isReversal);
   facts.push({ acctType: 'NotInvoicedReceipts', account_id: ACCT.NIR, dr: round2(nirDr), cr: 0 });
 
-  // --- InventoryClearing CR (from invoice upstream posting) ---
-  let invClrCr;
-  if (isReversal) {
-    const origSums = await readFactAcctSums(TABLE_MATCHINV, mi.reversal_id, acctSchemaId, ACCT.INV_CLR);
-    invClrCr = Number(origSums.acct_dr) * 1;  // reverse: swap DR/CR
-  } else {
-    const invoiceSums = await readFactAcctSums(TABLE_INVOICE, mi.c_invoice_id, acctSchemaId, ACCT.INV_CLR);
-    invClrCr = Number(invoiceSums.acct_dr) * multiplierInvoice;
-  }
+  const invClrCr = await computeInvClrCr(mi, acctSchemaId, multiplierInvoice, isReversal);
   facts.push({ acctType: 'InventoryClearing', account_id: ACCT.INV_CLR, dr: 0, cr: round2(invClrCr) });
 
-  // --- InvoicePriceVariance (difference) ---
   const ipv = round2(invClrCr - nirDr);
-
   if (ipv !== 0) {
-    const costingMethod = mi.costingmethod;
-
-    if (costingMethod === 'A') {
-      // AveragePO: split between asset and variance based on stock coverage
-      const qtyMatched = Math.abs(Number(mi.qty));
-      const qtyCost = opts.costingQty != null ? opts.costingQty : qtyMatched;
-
-      let amtAsset;
-      let amtVariance;
-      if (qtyCost < qtyMatched) {
-        amtAsset = round2(qtyCost * ipv / qtyMatched);
-        amtVariance = round2(ipv - amtAsset);
-      } else {
-        amtAsset = ipv;
-        amtVariance = 0;
-      }
-
-      if (amtAsset !== 0) {
-        facts.push({
-          acctType: 'Asset', account_id: ACCT.ASSET,
-          dr: amtAsset > 0 ? amtAsset : 0,
-          cr: amtAsset < 0 ? -amtAsset : 0,
-        });
-      }
-      if (amtVariance !== 0) {
-        facts.push({
-          acctType: 'AverageCostVariance', account_id: ACCT.AVG_COST_VAR,
-          dr: amtVariance > 0 ? amtVariance : 0,
-          cr: amtVariance < 0 ? -amtVariance : 0,
-        });
-      }
+    if (mi.costingmethod === 'A') {
+      facts.push(...buildAveragePOIpvLines(ipv, mi, opts));
     } else {
-      // Standard costing: full IPV to IPV account
-      facts.push({
-        acctType: 'InvoicePriceVariance', account_id: ACCT.IPV,
-        dr: ipv > 0 ? ipv : 0,
-        cr: ipv < 0 ? -ipv : 0,
-      });
+      facts.push(makeFactLine('InvoicePriceVariance', ACCT.IPV, ipv));
     }
   }
 
@@ -184,10 +187,10 @@ async function postMatchInv(matchInvId, opts = {}) {
   const mi = await loadMatchInv(matchInvId);
   if (!mi) throw new Error(`Match-inv ${matchInvId} not found`);
 
-  const { facts, balanced, debit, credit } = await buildFacts(mi, opts);
-  if (!balanced) throw new PostingNotBalancedError(debit, credit);
+  const result = await buildFacts(mi, opts);
+  if (!result.balanced) throw new PostingNotBalancedError(result.debit, result.credit);
 
-  for (const f of facts) {
+  for (const f of result.facts) {
     await db.query(`
       INSERT INTO fact_acct (ad_table_id, record_id, c_acctschema_id, account_id,
         c_currency_id, amtsourcedr, amtsourcecr, amtacctdr, amtacctcr, postingtype, dateacct)
@@ -197,11 +200,7 @@ async function postMatchInv(matchInvId, opts = {}) {
   }
 
   await db.query('UPDATE m_matchinv SET posted = TRUE WHERE m_matchinv_id = $1', [matchInvId]);
-  return { posted: true, debit, credit, facts };
-}
-
-function round2(n) {
-  return Math.round(n * 100) / 100;
+  return { posted: true, debit: result.debit, credit: result.credit, facts: result.facts };
 }
 
 module.exports = { loadMatchInv, buildFacts, postMatchInv, PostingNotBalancedError, readFactAcctSums, readFactAcctNet };
