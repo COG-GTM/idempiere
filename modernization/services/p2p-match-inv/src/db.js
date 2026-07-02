@@ -6,7 +6,7 @@ const SQL_DIR = path.join(__dirname, 'sql');
 
 const pool = new Pool({
   host: process.env.PGHOST || 'localhost',
-  port: parseInt(process.env.PGPORT, 10) || 5432,
+  port: Number.parseInt(process.env.PGPORT, 10) || 5432,
   user: process.env.PGUSER || 'postgres',
   password: process.env.PGPASSWORD || 'postgres',
   database: process.env.PGDATABASE || 'p2p',

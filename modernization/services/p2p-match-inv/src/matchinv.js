@@ -89,8 +89,8 @@ function makeFactLine(acctType, accountId, amount) {
   return {
     acctType,
     account_id: accountId,
-    dr: amount > 0 ? amount : 0,
-    cr: amount < 0 ? -amount : 0,
+    dr: Math.max(amount, 0),
+    cr: Math.max(-amount, 0),
   };
 }
 
@@ -118,7 +118,7 @@ async function computeInvClrCr(mi, acctSchemaId, multiplierInvoice, isReversal) 
 function buildAveragePOIpvLines(ipv, mi, opts) {
   const lines = [];
   const qtyMatched = Math.abs(Number(mi.qty));
-  const qtyCost = opts.costingQty != null ? opts.costingQty : qtyMatched;
+  const qtyCost = opts.costingQty ?? qtyMatched;
 
   let amtAsset;
   let amtVariance;
