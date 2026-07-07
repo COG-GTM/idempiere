@@ -1,0 +1,64 @@
+name: Deploy o2c-allocation (Vercel)
+
+# Deploys the Order-to-Cash allocation service to Vercel production whenever the
+# service changes land on master. This is the "PR -> CI -> deployment" pipeline
+# the demo traces from a completed ticket.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'modernization/services/o2c-allocation/**'
+      - '.github/workflows/vercel-deploy-o2c.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: vercel-o2c-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy to Vercel (production)
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://o2c-allocation.vercel.app
+    defaults:
+      run:
+        working-directory: modernization/services/o2c-allocation
+    env:
+      # Project/org identifiers are not secret; only the token is.
+      VERCEL_ORG_ID: team_A8DpfET37cU2B3TcZllY1ga8
+      VERCEL_PROJECT_ID: prj_MClLfaHQ39GVJUNPJe5knGY2zBqn
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@41.4.1
+
+      - name: Pull Vercel project settings
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Build project artifacts
+        run: vercel build --prod --token="$VERCEL_TOKEN"
+
+      - name: Deploy to production
+        id: deploy
+        run: |
+          url="$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN")"
+          echo "Deployed to: $url"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Summary
+        run: |
+          {
+            echo "### o2c-allocation deployed to Vercel"
+            echo ""
+            echo "- Deployment: ${{ steps.deploy.outputs.url }}"
+            echo "- Production alias: https://o2c-allocation.vercel.app"
+          } >> "$GITHUB_STEP_SUMMARY"
