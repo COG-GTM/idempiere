@@ -50,18 +50,29 @@ test('EUR allocation 601 books a 25.00 realized FX loss and balances', async () 
   assert.equal(t.Receivable, -550);     // 500 EUR @1.10
 });
 
-test('SEEDED REGRESSION: dropping realized FX leaves EUR allocation unbalanced', async () => {
+test('FIX: realized FX line is emitted even with the ALLOC_BUG gate armed, so EUR allocation 601 balances', async () => {
   const alloc = await loadAllocation(601);
-  const { balanced, debit, credit } = await buildFacts(alloc, { buggy: true });
-  assert.equal(balanced, false);
-  assert.equal(debit, 525);
+  const { facts, balanced, debit, credit, gated } = await buildFacts(alloc, { buggy: true });
+  assert.equal(gated, true, 'demo gate flag is still threaded through');
+  assert.ok(balanced, 'multi-currency allocation must balance even when gated');
+  assert.equal(debit, 550);
   assert.equal(credit, 550);
+  const t = byType(facts);
+  assert.equal(t.RealizedLoss, 25); // FX loss line restored under the gate
 
   await db.query('UPDATE c_allocationhdr SET posted = FALSE WHERE c_allocationhdr_id = 601');
-  await assert.rejects(
-    () => postAllocation(601, { buggy: true }),
-    (err) => err instanceof PostingNotBalancedError && err.debit === 525 && err.credit === 550,
-  );
+  const res = await postAllocation(601, { buggy: true });
+  assert.equal(res.posted, true);
+  assert.equal(res.debit, 550);
+  assert.equal(res.credit, 550);
+});
+
+test('PostingNotBalancedError still guards a genuinely unbalanced posting', () => {
+  const err = new PostingNotBalancedError(601, 525, 550);
+  assert.equal(err.name, 'PostingNotBalancedError');
+  assert.equal(err.debit, 525);
+  assert.equal(err.credit, 550);
+  assert.match(err.message, /DR 525\.00 != CR 550\.00/);
 });
 
 test('USD allocation 600 is unaffected by the regression (single-currency)', async () => {
