@@ -22,13 +22,46 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: o2c
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d o2c"
+          --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # full history for accurate new-code detection
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: modernization/services/o2c-allocation/package-lock.json
+      # Generate an lcov report for the o2c-allocation service so SonarCloud can
+      # measure coverage on new code (the quality gate requires it). Rewrite the
+      # report paths to be repo-root relative so the scanner resolves them.
+      - name: o2c-allocation coverage
+        working-directory: modernization/services/o2c-allocation
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: o2c
+        run: |
+          npm ci
+          mkdir -p coverage
+          node --test --experimental-test-coverage \
+            --test-reporter=lcov --test-reporter-destination=coverage/lcov.info
+          sed -i 's|^SF:|SF:modernization/services/o2c-allocation/|' coverage/lcov.info
       # qualitygate.wait blocks only on pull_request: PRs must pass the gate,
-      # but master pushes don't wait on the branch gate (the demo project has no
-      # coverage report, so a blocking wait on master can never pass).
+      # but master pushes don't wait on the branch gate.
       - name: SonarCloud scan
         id: scan
         uses: SonarSource/sonarqube-scan-action@v4
@@ -41,8 +74,9 @@ jobs:
             -Dsonar.organization=${{ vars.sonarOrganization }}
             -Dsonar.sources=modernization
             -Dsonar.exclusions=**/node_modules/**,**/dist/**,modernization/journey-map/dist/**
-            -Dsonar.coverage.exclusions=modernization/journey-map/**
+            -Dsonar.coverage.exclusions=modernization/journey-map/**,modernization/tools/**,**/*.test.js
             -Dsonar.cpd.exclusions=modernization/journey-map/**
+            -Dsonar.javascript.lcov.reportPaths=modernization/services/o2c-allocation/coverage/lcov.info
             -Dsonar.sourceEncoding=UTF-8
             -Dsonar.qualitygate.wait=${{ github.event_name == 'pull_request' }}
 

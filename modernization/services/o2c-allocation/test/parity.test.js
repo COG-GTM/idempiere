@@ -7,6 +7,7 @@ const assert = require('node:assert');
 const db = require('../src/db');
 const { migrate } = require('../src/migrate');
 const { postAllocation, buildFacts, loadAllocation, getJournal, PostingNotBalancedError } = require('../src/allocation');
+const app = require('../src/server');
 
 before(async () => {
   await migrate();
@@ -119,4 +120,35 @@ test('journal of posted EUR allocation 601 shows the realized FX line and balanc
   const loss = journal.lines.find((l) => l.acctType === 'RealizedLoss');
   assert.equal(loss.debit, 25);
   assert.deepEqual(journal.totals, { debit: 550, credit: 550, balanced: true });
+});
+
+test('GET /allocations/:id/journal serves the journal over HTTP', async () => {
+  await db.query('DELETE FROM fact_acct WHERE record_id = 600');
+  await db.query('UPDATE c_allocationhdr SET posted = FALSE WHERE c_allocationhdr_id = 600');
+  const server = app.listen(0);
+  try {
+    const { port } = server.address();
+    const base = `http://127.0.0.1:${port}`;
+
+    // Unposted -> friendly 200 (not an error).
+    let res = await fetch(`${base}/allocations/600/journal`);
+    let body = await res.json();
+    assert.equal(res.status, 200);
+    assert.equal(body.posted, false);
+
+    // Unknown -> 404.
+    res = await fetch(`${base}/allocations/999999/journal`);
+    assert.equal(res.status, 404);
+
+    // Posted -> balanced GL lines.
+    await postAllocation(600, { buggy: false });
+    res = await fetch(`${base}/allocations/600/journal`);
+    body = await res.json();
+    assert.equal(res.status, 200);
+    assert.equal(body.posted, true);
+    assert.equal(body.totals.balanced, true);
+    assert.ok(body.lines.every((l) => l.currency === 'USD'));
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
 });
