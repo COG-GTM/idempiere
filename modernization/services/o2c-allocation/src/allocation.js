@@ -137,6 +137,53 @@ async function buildFacts(allocation, { buggy = false } = {}, client = db) {
   return { facts, debit: dr, credit: cr, balanced: Math.abs(dr - cr) < EPSILON };
 }
 
+// Read the persisted GL journal (Fact_Acct lines) for one allocation, so an AR
+// Accountant can verify a posting without querying the database. Returns null
+// when the allocation does not exist, and a `{ posted: false }` view (never an
+// error) when it exists but has not been posted yet.
+async function getJournal(id, client = db) {
+  const hdr = (await client.query(
+    `SELECT c_allocationhdr_id, posted, c_currency_id, datetrx
+       FROM c_allocationhdr WHERE c_allocationhdr_id = $1`,
+    [id],
+  )).rows[0];
+  if (!hdr) return null;
+  if (!hdr.posted) {
+    return { allocationId: id, posted: false, message: `Allocation ${id} has not been posted yet.` };
+  }
+
+  const { rows } = await client.query(
+    `SELECT f.fact_acct_id, f.account_id, a.acct_type, a.name AS account_name,
+            f.amtacctdr, f.amtacctcr, cur.iso_code AS currency, f.description
+       FROM fact_acct f
+       JOIN acct_element a ON a.account_id = f.account_id
+       JOIN c_currency cur ON cur.c_currency_id = f.c_currency_id
+      WHERE f.ad_table_id = $1 AND f.record_id = $2
+      ORDER BY f.fact_acct_id`,
+    [AD_TABLE_C_ALLOCATIONHDR, id],
+  );
+
+  const lines = rows.map((r) => ({
+    factAcctId: Number(r.fact_acct_id),
+    accountId: r.account_id,
+    acctType: r.acct_type,
+    accountName: r.account_name,
+    debit: Number(r.amtacctdr),
+    credit: Number(r.amtacctcr),
+    currency: r.currency,
+    description: r.description,
+  }));
+  const debit = round2(lines.reduce((sum, l) => sum + l.debit, 0));
+  const credit = round2(lines.reduce((sum, l) => sum + l.credit, 0));
+
+  return {
+    allocationId: id,
+    posted: true,
+    lines,
+    totals: { debit, credit, balanced: Math.abs(debit - credit) < EPSILON },
+  };
+}
+
 // Post an allocation: build facts, enforce balance, persist to fact_acct.
 async function postAllocation(id, { buggy = process.env.ALLOC_BUG === '1' } = {}) {
   return db.withTransaction(async (client) => {
@@ -217,4 +264,4 @@ async function recomputeBalances({ scale } = {}) {
   };
 }
 
-module.exports = { postAllocation, buildFacts, loadAllocation, getRate, round2, recomputeBalances, PostingNotBalancedError, ACCT_CURRENCY_ID };
+module.exports = { postAllocation, buildFacts, loadAllocation, getJournal, getRate, round2, recomputeBalances, PostingNotBalancedError, ACCT_CURRENCY_ID };

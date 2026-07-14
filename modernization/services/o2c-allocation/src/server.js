@@ -7,7 +7,7 @@ const express = require('express');
 const path = require('path');
 const db = require('./db');
 const { migrate } = require('./migrate');
-const { postAllocation, recomputeBalances } = require('./allocation');
+const { postAllocation, recomputeBalances, getJournal } = require('./allocation');
 
 const app = express();
 app.use(express.json());
@@ -33,6 +33,18 @@ app.get('/allocations/:id/facts', async (req, res, next) => {
       [req.params.id],
     );
     res.json({ allocationId: Number(req.params.id), facts: rows });
+  } catch (e) { next(e); }
+});
+
+// Inspect the GL journal (Fact_Acct lines + balanced totals) a posting produced,
+// so an AR Accountant can verify it from the control panel. An unposted
+// allocation returns a friendly `{ posted: false }` view rather than erroring.
+app.get('/allocations/:id/journal', async (req, res, next) => {
+  const id = Number(req.params.id);
+  try {
+    const journal = await getJournal(id);
+    if (!journal) return res.status(404).json({ error: `Allocation ${id} not found` });
+    res.json(journal);
   } catch (e) { next(e); }
 });
 

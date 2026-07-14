@@ -56,8 +56,12 @@
       <h2>Post an allocation to the GL</h2>
       <p>Applies a payment/discount/write-off to the ledger and books balanced <code>Fact_Acct</code> lines.</p>
       <button class="ok"  onclick="post(600)">Post #600 — USD (balanced)</button>
+      <button onclick="journal(600)">View journal #600</button>
+      <br/>
       <button class="bad" onclick="post(601)">Post #601 — EUR (FX entry)</button>
+      <button onclick="journal(601)">View journal #601</button>
       <div class="sub">With <code>ALLOC_BUG=1</code>, #601 drops the realized-FX balancing entry → <b>PostingNotBalancedError</b> → Sentry issue.</div>
+      <div class="sub"><b>View journal</b> shows the posted <code>Fact_Acct</code> GL lines (account, debit, credit, currency) and balanced totals.</div>
     </div>
 
     <div class="card">
@@ -88,6 +92,33 @@
       show('POST /allocations/' + id + '/post …', {});
       const r = await call('POST', '/allocations/' + id + '/post');
       show('POST /allocations/' + id + '/post → HTTP ' + r.status, r.json);
+    }
+    function showJournal(id, r) {
+      if (r.status === 404) return show('GET /allocations/' + id + '/journal → HTTP 404', r.json);
+      const j = r.json;
+      if (!j.posted) {
+        return show('GET /allocations/' + id + '/journal → HTTP ' + r.status, j);
+      }
+      const rows = (j.lines || []).map((l) =>
+        `  ${l.acctType.padEnd(16)} ${l.accountName.padEnd(34)} ` +
+        `DR ${l.debit.toFixed(2).padStart(10)}  CR ${l.credit.toFixed(2).padStart(10)}  ${l.currency}`,
+      );
+      const t = j.totals;
+      const totalsLine =
+        `  ${''.padEnd(16)} ${'TOTALS'.padEnd(34)} ` +
+        `DR ${t.debit.toFixed(2).padStart(10)}  CR ${t.credit.toFixed(2).padStart(10)}  ` +
+        `[${t.balanced ? 'BALANCED' : 'NOT BALANCED'}]`;
+      out.textContent =
+        `GET /allocations/${id}/journal → HTTP ${r.status}\n\n` +
+        `GL journal for allocation ${id}:\n` +
+        rows.join('\n') + '\n' +
+        '  ' + '-'.repeat(78) + '\n' +
+        totalsLine;
+    }
+    async function journal(id) {
+      show('GET /allocations/' + id + '/journal …', {});
+      const r = await call('GET', '/allocations/' + id + '/journal');
+      showJournal(id, r);
     }
     async function recompute() {
       const spin = document.getElementById('spin');

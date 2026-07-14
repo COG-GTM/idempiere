@@ -6,7 +6,7 @@ const assert = require('node:assert');
 
 const db = require('../src/db');
 const { migrate } = require('../src/migrate');
-const { postAllocation, buildFacts, loadAllocation, PostingNotBalancedError } = require('../src/allocation');
+const { postAllocation, buildFacts, loadAllocation, getJournal, PostingNotBalancedError } = require('../src/allocation');
 
 before(async () => {
   await migrate();
@@ -68,4 +68,55 @@ test('USD allocation 600 is unaffected by the regression (single-currency)', asy
   await db.query('UPDATE c_allocationhdr SET posted = FALSE WHERE c_allocationhdr_id = 600');
   const res = await postAllocation(600, { buggy: true });
   assert.equal(res.posted, true); // no FX => still balances even in bug mode
+});
+
+// --- GL journal view (GET /allocations/:id/journal) ---
+
+test('journal of an unposted allocation reports not-posted instead of erroring', async () => {
+  await db.query('DELETE FROM fact_acct WHERE record_id = 600');
+  await db.query('UPDATE c_allocationhdr SET posted = FALSE WHERE c_allocationhdr_id = 600');
+  const journal = await getJournal(600);
+  assert.equal(journal.allocationId, 600);
+  assert.equal(journal.posted, false);
+  assert.match(journal.message, /not been posted/i);
+});
+
+test('journal of an unknown allocation returns null (404 at the route)', async () => {
+  assert.equal(await getJournal(999999), null);
+});
+
+test('journal of posted USD allocation 600 lists balanced GL lines', async () => {
+  await db.query('UPDATE c_allocationhdr SET posted = FALSE WHERE c_allocationhdr_id = 600');
+  await postAllocation(600, { buggy: false });
+  const journal = await getJournal(600);
+
+  assert.equal(journal.posted, true);
+  assert.ok(journal.lines.length >= 1);
+  for (const line of journal.lines) {
+    assert.equal(typeof line.acctType, 'string');
+    assert.equal(typeof line.accountName, 'string');
+    assert.equal(typeof line.debit, 'number');
+    assert.equal(typeof line.credit, 'number');
+    assert.equal(line.currency, 'USD');
+  }
+
+  const cash = journal.lines.find((l) => l.acctType === 'UnallocatedCash');
+  const discount = journal.lines.find((l) => l.acctType === 'DiscountExp');
+  const ar = journal.lines.find((l) => l.acctType === 'Receivable');
+  assert.equal(cash.debit, 980);
+  assert.equal(discount.debit, 20);
+  assert.equal(ar.credit, 1000);
+  assert.deepEqual(journal.totals, { debit: 1000, credit: 1000, balanced: true });
+});
+
+test('journal of posted EUR allocation 601 shows the realized FX line and balances', async () => {
+  await db.query('DELETE FROM fact_acct WHERE record_id = 601');
+  await db.query('UPDATE c_allocationhdr SET posted = FALSE WHERE c_allocationhdr_id = 601');
+  await postAllocation(601, { buggy: false });
+  const journal = await getJournal(601);
+
+  assert.equal(journal.posted, true);
+  const loss = journal.lines.find((l) => l.acctType === 'RealizedLoss');
+  assert.equal(loss.debit, 25);
+  assert.deepEqual(journal.totals, { debit: 550, credit: 550, balanced: true });
 });
