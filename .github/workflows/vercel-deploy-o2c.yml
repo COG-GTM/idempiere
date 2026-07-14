@@ -1,0 +1,42 @@
+name: Deploy o2c-allocation (Vercel)
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "modernization/services/o2c-allocation/**"
+      - ".github/workflows/vercel-deploy-o2c.yml"
+  workflow_dispatch: {}
+
+concurrency:
+  group: vercel-deploy-o2c
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to Vercel (production)
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: team_A8DpfET37cU2B3TcZllY1ga8
+      VERCEL_PROJECT_ID: prj_MClLfaHQ39GVJUNPJe5knGY2zBqn
+    defaults:
+      run:
+        working-directory: modernization/services/o2c-allocation
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull Vercel environment
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
