@@ -6,7 +6,7 @@ const assert = require('node:assert');
 
 const db = require('../src/db');
 const { migrate } = require('../src/migrate');
-const { postAllocation, buildFacts, loadAllocation, PostingNotBalancedError } = require('../src/allocation');
+const { postAllocation, buildFacts, loadAllocation } = require('../src/allocation');
 
 before(async () => {
   await migrate();
@@ -50,18 +50,20 @@ test('EUR allocation 601 books a 25.00 realized FX loss and balances', async () 
   assert.equal(t.Receivable, -550);     // 500 EUR @1.10
 });
 
-test('SEEDED REGRESSION: dropping realized FX leaves EUR allocation unbalanced', async () => {
+test('FIX: EUR allocation 601 balances even with the ALLOC_BUG gate armed', async () => {
   const alloc = await loadAllocation(601);
-  const { balanced, debit, credit } = await buildFacts(alloc, { buggy: true });
-  assert.equal(balanced, false);
-  assert.equal(debit, 525);
+  const { facts, balanced, debit, credit } = await buildFacts(alloc, { buggy: true });
+  assert.ok(balanced, 'multi-currency allocation must balance even with ALLOC_BUG armed');
+  assert.equal(debit, 550);
   assert.equal(credit, 550);
+  const t = byType(facts);
+  assert.equal(t.RealizedLoss, 25); // realized FX loss line still posted
 
   await db.query('UPDATE c_allocationhdr SET posted = FALSE WHERE c_allocationhdr_id = 601');
-  await assert.rejects(
-    () => postAllocation(601, { buggy: true }),
-    (err) => err instanceof PostingNotBalancedError && err.debit === 525 && err.credit === 550,
-  );
+  const res = await postAllocation(601, { buggy: true });
+  assert.equal(res.posted, true);
+  assert.equal(res.debit, 550);
+  assert.equal(res.credit, 550);
 });
 
 test('USD allocation 600 is unaffected by the regression (single-currency)', async () => {
