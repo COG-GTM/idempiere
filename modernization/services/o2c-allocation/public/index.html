@@ -61,6 +61,14 @@
     </div>
 
     <div class="card">
+      <h2>Inspect the GL journal</h2>
+      <p>Shows the <code>Fact_Acct</code> lines a posting produced — account, debit, credit, currency — and the balanced totals.</p>
+      <button onclick="journal(600)">View journal #600</button>
+      <button onclick="journal(601)">View journal #601</button>
+      <div class="sub">An allocation that has not been posted yet reports that instead of erroring.</div>
+    </div>
+
+    <div class="card">
       <h2>Run GL reconciliation (slow)</h2>
       <p>Re-derives every allocation's balance. A dropped-index migration artifact makes it scan an unindexed row product — latency grows with ledger size.</p>
       <button class="warn" onclick="recompute()">Run slow recompute<span class="spin" id="spin">⏳ running…</span></button>
@@ -88,6 +96,31 @@
       show('POST /allocations/' + id + '/post …', {});
       const r = await call('POST', '/allocations/' + id + '/post');
       show('POST /allocations/' + id + '/post → HTTP ' + r.status, r.json);
+    }
+    function renderJournal(id, data) {
+      if (!data.posted) return (data.message || 'Allocation ' + id + ' has no journal yet.');
+      const rows = data.lines.map((l) => [
+        String(l.accountId),
+        (l.accountName || l.acctType).padEnd(32),
+        (l.debit ? l.debit.toFixed(2) : '').padStart(12),
+        (l.credit ? l.credit.toFixed(2) : '').padStart(12),
+        l.currency,
+        l.description || '',
+      ].join('  '));
+      const t = data.totals;
+      return [
+        'Acct  Account'.padEnd(39) + 'Debit'.padStart(12) + 'Credit'.padStart(14) + '  Ccy  Description',
+        ...rows,
+        '',
+        'TOTALS'.padEnd(39) + t.debit.toFixed(2).padStart(12) + t.credit.toFixed(2).padStart(14)
+          + '        ' + (t.balanced ? 'BALANCED' : 'NOT BALANCED'),
+      ].join('\n');
+    }
+    async function journal(id) {
+      show('GET /allocations/' + id + '/journal …', {});
+      const r = await call('GET', '/allocations/' + id + '/journal');
+      out.textContent = 'GET /allocations/' + id + '/journal → HTTP ' + r.status + '\n'
+        + (r.status === 200 ? renderJournal(id, r.json) : JSON.stringify(r.json, null, 2));
     }
     async function recompute() {
       const spin = document.getElementById('spin');

@@ -58,6 +58,7 @@ curl localhost:3001/health
 curl -X POST localhost:3001/allocations/600/post   # USD, balanced
 curl -X POST localhost:3001/allocations/601/post   # EUR, books 25.00 realized FX loss
 curl localhost:3001/allocations/601/facts
+curl localhost:3001/allocations/601/journal  # GL lines + balanced totals ("View journal" in the UI)
 ```
 
 ## Parity tests

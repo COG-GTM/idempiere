@@ -7,7 +7,7 @@ const express = require('express');
 const path = require('path');
 const db = require('./db');
 const { migrate } = require('./migrate');
-const { postAllocation, recomputeBalances } = require('./allocation');
+const { postAllocation, recomputeBalances, getJournal } = require('./allocation');
 
 const app = express();
 app.use(express.json());
@@ -33,6 +33,21 @@ app.get('/allocations/:id/facts', async (req, res, next) => {
       [req.params.id],
     );
     res.json({ allocationId: Number(req.params.id), facts: rows });
+  } catch (e) { next(e); }
+});
+
+// Inspect the GL journal a posting produced: every Fact_Acct line (account,
+// debit, credit, currency) with the balanced totals. Unposted allocations get a
+// 200 saying so rather than an error.
+app.get('/allocations/:id/journal', async (req, res, next) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({ error: `Invalid allocation id '${req.params.id}'` });
+  }
+  try {
+    const journal = await getJournal(id);
+    if (!journal) return res.status(404).json({ error: `Allocation ${id} not found` });
+    res.json(journal);
   } catch (e) { next(e); }
 });
 

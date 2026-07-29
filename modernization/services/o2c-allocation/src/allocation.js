@@ -176,6 +176,67 @@ async function postAllocation(id, { buggy = process.env.ALLOC_BUG === '1' } = {}
   });
 }
 
+// Read the GL journal an allocation produced: the persisted Fact_Acct lines
+// (account, debit, credit, currency) plus the balanced totals. Returns null when
+// the allocation does not exist, and `posted: false` with no lines when it has
+// not been posted yet.
+async function getJournal(id, client = db) {
+  const hdr = (await client.query(
+    `SELECT posted FROM c_allocationhdr WHERE c_allocationhdr_id = $1`, [id],
+  )).rows[0];
+  if (!hdr) return null;
+
+  if (!hdr.posted) {
+    return {
+      allocationId: id,
+      posted: false,
+      message: `Allocation ${id} has not been posted to the GL yet — no journal exists.`,
+      lines: [],
+      totals: { debit: 0, credit: 0, balanced: true },
+    };
+  }
+
+  const { rows } = await client.query(
+    `SELECT f.fact_acct_id, f.account_id, a.acct_type, a.name AS account_name,
+            c.iso_code AS currency, f.amtacctdr, f.amtacctcr, f.description, f.dateacct
+       FROM fact_acct f
+       JOIN acct_element a ON a.account_id = f.account_id
+       JOIN c_currency c ON c.c_currency_id = f.c_currency_id
+      WHERE f.ad_table_id = $1 AND f.record_id = $2
+      ORDER BY f.fact_acct_id`,
+    [AD_TABLE_C_ALLOCATIONHDR, id],
+  );
+
+  let totalDr = 0;
+  let totalCr = 0;
+  const lines = rows.map((r) => {
+    const debit = Number(r.amtacctdr);
+    const credit = Number(r.amtacctcr);
+    totalDr += debit;
+    totalCr += credit;
+    return {
+      factAcctId: Number(r.fact_acct_id),
+      accountId: r.account_id,
+      accountName: r.account_name,
+      acctType: r.acct_type,
+      currency: r.currency,
+      debit,
+      credit,
+      description: r.description,
+      dateacct: r.dateacct,
+    };
+  });
+
+  const debit = round2(totalDr);
+  const credit = round2(totalCr);
+  return {
+    allocationId: id,
+    posted: true,
+    lines,
+    totals: { debit, credit, balanced: Math.abs(debit - credit) < EPSILON },
+  };
+}
+
 // Deliberately-slow GL re-derivation — the Datadog *performance* regression
 // (distinct from the Sentry *correctness* break). Models a naive Oracle->PG
 // migration that lost an index on fact_acct: the "reconciliation" re-checks the
@@ -217,4 +278,4 @@ async function recomputeBalances({ scale } = {}) {
   };
 }
 
-module.exports = { postAllocation, buildFacts, loadAllocation, getRate, round2, recomputeBalances, PostingNotBalancedError, ACCT_CURRENCY_ID };
+module.exports = { postAllocation, buildFacts, loadAllocation, getJournal, getRate, round2, recomputeBalances, PostingNotBalancedError, ACCT_CURRENCY_ID };
