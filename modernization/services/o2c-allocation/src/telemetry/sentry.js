@@ -37,10 +37,22 @@ function capturePostingError(err, context) {
   });
 }
 
+// Drain the SDK's event queue. On serverless runtimes the function instance is
+// frozen as soon as the response is sent, so queued events must be flushed
+// before responding or they are dropped as network errors.
+async function flushEvents(timeoutMs = 2000) {
+  if (!enabled || !Sentry?.flush) return false;
+  try {
+    return await Sentry.flush(timeoutMs);
+  } catch {
+    return false;
+  }
+}
+
 function expressErrorHandler(app) {
   if (enabled && Sentry?.setupExpressErrorHandler) {
     Sentry.setupExpressErrorHandler(app);
   }
 }
 
-module.exports = { initSentry, capturePostingError, expressErrorHandler, isEnabled: () => enabled };
+module.exports = { initSentry, capturePostingError, flushEvents, expressErrorHandler, isEnabled: () => enabled };

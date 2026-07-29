@@ -48,6 +48,7 @@ app.post('/allocations/:id/post', async (req, res, next) => {
   } catch (err) {
     if (err.statusCode === 404) return res.status(404).json({ error: err.message });
     sentry.capturePostingError(err, { allocationId: id, debit: err.debit, credit: err.credit });
+    await sentry.flushEvents();
     if (err.name === 'PostingNotBalancedError') {
       return res.status(422).json({ error: err.message, allocationId: id, debit: err.debit, credit: err.credit });
     }
