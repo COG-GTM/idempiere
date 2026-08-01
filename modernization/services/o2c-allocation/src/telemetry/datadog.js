@@ -16,7 +16,7 @@ function normalizeTagValue(value) {
 
 function tagsToArray(tags) {
   if (!tags) return [];
-  if (Array.isArray(tags)) return tags.map((tag) => String(tag));
+  if (Array.isArray(tags)) return tags.map(String);
   return Object.entries(tags).map(([key, value]) => `${key}:${normalizeTagValue(value)}`);
 }
 
@@ -136,4 +136,4 @@ function timing(metric, valueMs, tags) {
   if (agentless) emitAgentless(metric, 'gauge', valueMs, tags, { timing: true });
 }
 
-module.exports = { initDatadog, increment, gauge, timing };
+module.exports = { initDatadog, increment, gauge, timing, _test: { normalizeTagValue, tagsToArray, buildSeries } };

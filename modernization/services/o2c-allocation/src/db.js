@@ -136,4 +136,5 @@ module.exports = {
   ensureReady,
   runSqlScript,
   isEmbeddedDb: shouldUseEmbeddedDb,
+  _test: { isLocalHostname, buildPgPoolConfig, buildDiscretePoolConfig },
 };
