@@ -1,0 +1,21 @@
+{
+  "scenario": "eur-receipt-fx-gain",
+  "description": "EUR allocation 602: EUR 400 receipt at rate 1.10 settles AR booked at 1.05 — realized FX gain 20.00",
+  "allocationId": 602,
+  "seedSql": [
+    "INSERT INTO c_invoice (c_invoice_id, c_bpartner_id, c_currency_id, dateinvoiced, grandtotal) VALUES (402, 200, 101, DATE '2024-02-05', 400.00) ON CONFLICT DO NOTHING",
+    "INSERT INTO c_payment (c_payment_id, c_bpartner_id, c_currency_id, datetrx, payamt) VALUES (502, 200, 101, DATE '2024-01-15', 400.00) ON CONFLICT DO NOTHING",
+    "INSERT INTO c_allocationhdr (c_allocationhdr_id, c_currency_id, datetrx) VALUES (602, 101, DATE '2024-01-15') ON CONFLICT DO NOTHING",
+    "INSERT INTO c_allocationline (c_allocationline_id, c_allocationhdr_id, c_invoice_id, c_payment_id, c_bpartner_id, amount, discountamt, writeoffamt) VALUES (702, 602, 402, 502, 200, 400.00, 0.00, 0.00) ON CONFLICT DO NOTHING"
+  ],
+  "expected": {
+    "totalDebit": 440.00,
+    "totalCredit": 440.00,
+    "balanced": true,
+    "lines": [
+      { "acctType": "UnallocatedCash", "dr": 440.00, "cr": 0.00 },
+      { "acctType": "RealizedGain", "dr": 0.00, "cr": 20.00 },
+      { "acctType": "Receivable", "dr": 0.00, "cr": 420.00 }
+    ]
+  }
+}

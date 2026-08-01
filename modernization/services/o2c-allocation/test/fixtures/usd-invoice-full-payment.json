@@ -1,0 +1,16 @@
+{
+  "scenario": "usd-invoice-full-payment",
+  "description": "USD allocation 600: cash 980 + discount 20 settles AR 1000 — single-currency, no FX",
+  "allocationId": 600,
+  "seedSql": [],
+  "expected": {
+    "totalDebit": 1000.00,
+    "totalCredit": 1000.00,
+    "balanced": true,
+    "lines": [
+      { "acctType": "UnallocatedCash", "dr": 980.00, "cr": 0.00 },
+      { "acctType": "DiscountExp", "dr": 20.00, "cr": 0.00 },
+      { "acctType": "Receivable", "dr": 0.00, "cr": 1000.00 }
+    ]
+  }
+}
