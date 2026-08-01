@@ -6,7 +6,7 @@ const assert = require('node:assert');
 
 const db = require('../src/db');
 const { migrate } = require('../src/migrate');
-const { postAllocation, buildFacts, loadAllocation, PostingNotBalancedError } = require('../src/allocation');
+const { postAllocation, buildFacts, loadAllocation } = require('../src/allocation');
 
 before(async () => {
   await migrate();
@@ -24,13 +24,13 @@ function byType(facts) {
 }
 
 test('USD allocation 600 posts balanced (cash 980 + discount 20 = AR 1000)', async () => {
-  const res = await postAllocation(600, { buggy: false });
+  const res = await postAllocation(600);
   assert.equal(res.posted, true);
   assert.equal(res.debit, 1000);
   assert.equal(res.credit, 1000);
 
   const alloc = await loadAllocation(600);
-  const { facts, balanced } = await buildFacts(alloc, { buggy: false });
+  const { facts, balanced } = await buildFacts(alloc);
   assert.ok(balanced);
   const t = byType(facts);
   assert.equal(t.UnallocatedCash, 980);
@@ -40,7 +40,7 @@ test('USD allocation 600 posts balanced (cash 980 + discount 20 = AR 1000)', asy
 
 test('EUR allocation 601 books a 25.00 realized FX loss and balances', async () => {
   const alloc = await loadAllocation(601);
-  const { facts, balanced, debit, credit } = await buildFacts(alloc, { buggy: false });
+  const { facts, balanced, debit, credit } = await buildFacts(alloc);
   assert.ok(balanced, 'multi-currency allocation must balance');
   assert.equal(debit, 550);
   assert.equal(credit, 550);
@@ -50,22 +50,18 @@ test('EUR allocation 601 books a 25.00 realized FX loss and balances', async () 
   assert.equal(t.Receivable, -550);     // 500 EUR @1.10
 });
 
-test('SEEDED REGRESSION: dropping realized FX leaves EUR allocation unbalanced', async () => {
-  const alloc = await loadAllocation(601);
-  const { balanced, debit, credit } = await buildFacts(alloc, { buggy: true });
-  assert.equal(balanced, false);
-  assert.equal(debit, 525);
-  assert.equal(credit, 550);
-
+test('EUR allocation 601 posts balanced with realized FX loss (regression fix)', async () => {
   await db.query('UPDATE c_allocationhdr SET posted = FALSE WHERE c_allocationhdr_id = 601');
-  await assert.rejects(
-    () => postAllocation(601, { buggy: true }),
-    (err) => err instanceof PostingNotBalancedError && err.debit === 525 && err.credit === 550,
-  );
+  const res = await postAllocation(601);
+  assert.equal(res.posted, true);
+  assert.equal(res.debit, 550);
+  assert.equal(res.credit, 550);
 });
 
-test('USD allocation 600 is unaffected by the regression (single-currency)', async () => {
+test('USD allocation 600 re-posts balanced (single-currency, no FX)', async () => {
   await db.query('UPDATE c_allocationhdr SET posted = FALSE WHERE c_allocationhdr_id = 600');
-  const res = await postAllocation(600, { buggy: true });
-  assert.equal(res.posted, true); // no FX => still balances even in bug mode
+  const res = await postAllocation(600);
+  assert.equal(res.posted, true);
+  assert.equal(res.debit, 1000);
+  assert.equal(res.credit, 1000);
 });
