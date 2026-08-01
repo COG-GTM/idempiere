@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node src/server.js",
     "migrate": "node src/migrate.js",
-    "test": "node --test"
+    "test": "node --test",
+    "test:coverage": "c8 --reporter=lcov --reporter=text --reports-dir=coverage node --test"
   },
   "engines": {
     "node": ">=18"
@@ -19,5 +20,8 @@
     "express": "^4.21.2",
     "hot-shots": "^10.2.1",
     "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "c8": "^10.1.3"
   }
 }
