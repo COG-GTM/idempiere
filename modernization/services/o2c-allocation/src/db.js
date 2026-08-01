@@ -1,5 +1,5 @@
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const path = require('node:path');
 const { Pool } = require('pg');
 
 const SQL_DIR = path.join(__dirname, 'sql');
@@ -42,7 +42,7 @@ let embeddedDb = null;
 let embeddedInitPromise = null;
 
 async function runSqlScript(target, sql) {
-  const stripped = sql.replace(/--.*$/gm, '');
+  const stripped = sql.replace(/--[^\n]*/gm, '');
   const statements = stripped
     .split(';')
     .map((statement) => statement.trim())
@@ -92,9 +92,8 @@ const embeddedPool = {
   },
 };
 
-const pool = shouldUseEmbeddedDb()
-  ? embeddedPool
-  : new Pool(process.env.DATABASE_URL ? buildPgPoolConfig() : buildDiscretePoolConfig());
+const poolConfig = process.env.DATABASE_URL ? buildPgPoolConfig() : buildDiscretePoolConfig();
+const pool = shouldUseEmbeddedDb() ? embeddedPool : new Pool(poolConfig);
 
 async function ensureReady() {
   if (shouldUseEmbeddedDb()) {
