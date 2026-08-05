@@ -83,6 +83,9 @@ test('GET /allocations/:id/journal serves the journal and 404s unknown ids', asy
     const missing = await getJson(port, '/allocations/999999/journal');
     assert.equal(missing.status, 404);
     assert.match(missing.json.error, /not found/);
+
+    const bad = await getJson(port, '/allocations/not-a-number/journal');
+    assert.equal(bad.status, 400);
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }
