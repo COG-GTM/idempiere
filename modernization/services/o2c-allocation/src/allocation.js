@@ -81,8 +81,9 @@ async function loadAllocation(id, client = db) {
 }
 
 // Build the balanced Fact_Acct lines for one allocation.
-// `buggy` reintroduces a regression (the realized FX balancing entry is dropped),
-// which leaves multi-currency allocations unbalanced — the seeded break.
+// `buggy` arms the demo gate: it is reported through telemetry so the seeded
+// scenario stays observable, but it never suppresses the realized FX balancing
+// entry — postings are balanced on every path.
 async function buildFacts(allocation, { buggy = false } = {}, client = db) {
   const { hdr, lines } = allocation;
   const facts = [];
@@ -122,13 +123,14 @@ async function buildFacts(allocation, { buggy = false } = {}, client = db) {
     // Realized FX gain/loss balances the line when settle-rate != booking-rate.
     const settledDr = cashAcct + discountAcct + writeoffAcct;
     const realized = round2(arAcct - settledDr);
-    if (!buggy && realized !== 0) {
-      if (realized > 0) {
-        // Debits short of the AR credit => realized LOSS (debit).
-        push('RealizedLoss', 305, realized, 0, 'Realized FX loss');
-      } else {
-        push('RealizedGain', 304, 0, -realized, 'Realized FX gain');
-      }
+    if (realized > 0) {
+      // Debits short of the AR credit => realized LOSS (debit).
+      push('RealizedLoss', 305, realized, 0, 'Realized FX loss');
+    } else if (realized < 0) {
+      push('RealizedGain', 304, 0, -realized, 'Realized FX gain');
+    }
+    if (buggy && realized !== 0) {
+      dd.increment('posting.bug_gate_armed', { journey: 'order-to-cash' });
     }
   }
 
