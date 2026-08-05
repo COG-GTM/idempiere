@@ -7,7 +7,7 @@ const express = require('express');
 const path = require('path');
 const db = require('./db');
 const { migrate } = require('./migrate');
-const { postAllocation, recomputeBalances } = require('./allocation');
+const { postAllocation, recomputeBalances, getAllocationJournal } = require('./allocation');
 
 const app = express();
 app.use(express.json());
@@ -34,6 +34,21 @@ app.get('/allocations/:id/facts', async (req, res, next) => {
     );
     res.json({ allocationId: Number(req.params.id), facts: rows });
   } catch (e) { next(e); }
+});
+
+// GL journal (Fact_Acct lines + balanced totals) behind one allocation posting,
+// so the control panel can show the posting without a database round-trip.
+app.get('/allocations/:id/journal', async (req, res, next) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({ error: 'allocation id must be an integer' });
+  }
+  try {
+    res.json(await getAllocationJournal(id));
+  } catch (err) {
+    if (err.statusCode === 404) return res.status(404).json({ error: err.message });
+    next(err);
+  }
 });
 
 // Post an allocation to the GL. On a posting failure (e.g. the seeded FX

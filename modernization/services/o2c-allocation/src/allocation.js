@@ -13,6 +13,7 @@ const db = require('./db');
 const dd = require('./telemetry/datadog');
 
 const ACCT_CURRENCY_ID = 100; // USD
+const ACCT_CURRENCY_ISO = 'USD';
 const AD_TABLE_C_ALLOCATIONHDR = 735; // iDempiere AD_Table_ID for C_AllocationHdr
 const EPSILON = 0.005;
 
@@ -176,6 +177,71 @@ async function postAllocation(id, { buggy = process.env.ALLOC_BUG === '1' } = {}
   });
 }
 
+function journalEmptyMessage(id, posted) {
+  return posted
+    ? `Allocation ${id} is posted but has no GL journal lines.`
+    : `Allocation ${id} has not been posted yet — no GL journal lines to show.`;
+}
+
+// Read back the GL journal a posted allocation produced, so an AR accountant can
+// verify the posting from the control panel instead of querying fact_acct directly.
+// Unposted allocations are not an error: the journal is simply empty.
+async function getAllocationJournal(id, client = db) {
+  const hdr = (await client.query(
+    `SELECT c_allocationhdr_id, c_currency_id, datetrx, docstatus, posted
+       FROM c_allocationhdr WHERE c_allocationhdr_id = $1`,
+    [id],
+  )).rows[0];
+  if (!hdr) {
+    const e = new Error(`Allocation ${id} not found`);
+    e.statusCode = 404;
+    throw e;
+  }
+
+  const { rows } = await client.query(
+    `SELECT f.fact_acct_id, f.account_id, e.acct_type, e.name AS account_name,
+            c.iso_code AS currency, f.amtacctdr, f.amtacctcr, f.description, f.dateacct
+       FROM fact_acct f
+       JOIN acct_element e ON e.account_id = f.account_id
+       JOIN c_currency c ON c.c_currency_id = f.c_currency_id
+      WHERE f.ad_table_id = $1 AND f.record_id = $2
+      ORDER BY f.fact_acct_id`,
+    [AD_TABLE_C_ALLOCATIONHDR, id],
+  );
+
+  let totalDr = 0;
+  let totalCr = 0;
+  const lines = rows.map((r) => {
+    const debit = Number(r.amtacctdr);
+    const credit = Number(r.amtacctcr);
+    totalDr += debit;
+    totalCr += credit;
+    return {
+      factAcctId: Number(r.fact_acct_id),
+      accountId: r.account_id,
+      acctType: r.acct_type,
+      accountName: r.account_name,
+      currency: r.currency,
+      debit,
+      credit,
+      description: r.description,
+      dateacct: r.dateacct instanceof Date ? r.dateacct.toISOString().slice(0, 10) : r.dateacct,
+    };
+  });
+
+  const debit = round2(totalDr);
+  const credit = round2(totalCr);
+  return {
+    allocationId: id,
+    posted: Boolean(hdr.posted),
+    dateTrx: hdr.datetrx instanceof Date ? hdr.datetrx.toISOString().slice(0, 10) : hdr.datetrx,
+    accountingCurrency: ACCT_CURRENCY_ISO,
+    lines,
+    totals: { debit, credit, balanced: Math.abs(debit - credit) < EPSILON },
+    ...(lines.length === 0 ? { message: journalEmptyMessage(id, hdr.posted) } : {}),
+  };
+}
+
 // Deliberately-slow GL re-derivation — the Datadog *performance* regression
 // (distinct from the Sentry *correctness* break). Models a naive Oracle->PG
 // migration that lost an index on fact_acct: the "reconciliation" re-checks the
@@ -217,4 +283,4 @@ async function recomputeBalances({ scale } = {}) {
   };
 }
 
-module.exports = { postAllocation, buildFacts, loadAllocation, getRate, round2, recomputeBalances, PostingNotBalancedError, ACCT_CURRENCY_ID };
+module.exports = { postAllocation, buildFacts, loadAllocation, getAllocationJournal, getRate, round2, recomputeBalances, PostingNotBalancedError, ACCT_CURRENCY_ID, ACCT_CURRENCY_ISO };

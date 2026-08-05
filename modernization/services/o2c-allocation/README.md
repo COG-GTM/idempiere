@@ -58,7 +58,12 @@ curl localhost:3001/health
 curl -X POST localhost:3001/allocations/600/post   # USD, balanced
 curl -X POST localhost:3001/allocations/601/post   # EUR, books 25.00 realized FX loss
 curl localhost:3001/allocations/601/facts
+curl localhost:3001/allocations/600/journal  # GL lines (account, DR, CR, currency) + balanced totals
 ```
+
+`GET /allocations/:id/journal` is what the control panel's **View journal** buttons call. An
+allocation that has not been posted yet returns HTTP 200 with an empty `lines` array and a
+`message` saying so; an unknown allocation is a 404.
 
 ## Parity tests
 
