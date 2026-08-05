@@ -85,11 +85,14 @@ app imbalance  → Datadog metric → Datadog→Slack monitor    ┘→ #sam-dd-
                                                              → Devin → Jira → session → PR → SonarQube
 ```
 
-Set **`ALLOC_BUG=1`** to arm the seeded regression: a refactor that drops the
-realized-FX balancing entry. Single-currency allocations still post; **multi-currency
-allocations break** (`PostingNotBalancedError`, HTTP 422) — a realistic partial
-outage that surfaces in Sentry + Datadog (which then alert) and is caught by the
-parity test.
+**`ALLOC_BUG=1`** arms the demo gate. It previously dropped the realized-FX
+balancing entry, which broke every multi-currency allocation
+(`PostingNotBalancedError`, HTTP 422) while single-currency allocations still
+posted — the partial outage that surfaced in Sentry + Datadog. That defect is
+fixed (L8N2-101): the realized FX gain/loss line is now always posted, so
+allocations balance under either gate state. The gate remains wired through
+`postAllocation` and is reported as `bugMode` on `/health` and the posting
+response; the balance check still refuses any unbalanced entry.
 
 All credentials come from the environment and are never logged. The service runs
 fully even when every observability integration is unset (they degrade to no-ops).

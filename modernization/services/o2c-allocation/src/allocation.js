@@ -81,8 +81,12 @@ async function loadAllocation(id, client = db) {
 }
 
 // Build the balanced Fact_Acct lines for one allocation.
-// `buggy` reintroduces a regression (the realized FX balancing entry is dropped),
-// which leaves multi-currency allocations unbalanced — the seeded break.
+//
+// The realized FX gain/loss line is derived from the settle-vs-booking rate
+// difference and is always posted, so multi-currency allocations balance
+// regardless of the `buggy` demo gate (`ALLOC_BUG`). The gate is retained and
+// reported on the posting result, but it no longer suppresses the balancing
+// entry.
 async function buildFacts(allocation, { buggy = false } = {}, client = db) {
   const { hdr, lines } = allocation;
   const facts = [];
@@ -122,7 +126,7 @@ async function buildFacts(allocation, { buggy = false } = {}, client = db) {
     // Realized FX gain/loss balances the line when settle-rate != booking-rate.
     const settledDr = cashAcct + discountAcct + writeoffAcct;
     const realized = round2(arAcct - settledDr);
-    if (!buggy && realized !== 0) {
+    if (realized !== 0) {
       if (realized > 0) {
         // Debits short of the AR credit => realized LOSS (debit).
         push('RealizedLoss', 305, realized, 0, 'Realized FX loss');
@@ -134,7 +138,7 @@ async function buildFacts(allocation, { buggy = false } = {}, client = db) {
 
   const dr = round2(totalDr);
   const cr = round2(totalCr);
-  return { facts, debit: dr, credit: cr, balanced: Math.abs(dr - cr) < EPSILON };
+  return { facts, debit: dr, credit: cr, balanced: Math.abs(dr - cr) < EPSILON, bugMode: buggy };
 }
 
 // Post an allocation: build facts, enforce balance, persist to fact_acct.
@@ -150,7 +154,7 @@ async function postAllocation(id, { buggy = process.env.ALLOC_BUG === '1' } = {}
       return { allocationId: id, alreadyPosted: true };
     }
 
-    const { facts, debit, credit, balanced } = await buildFacts(allocation, { buggy }, client);
+    const { facts, debit, credit, balanced, bugMode } = await buildFacts(allocation, { buggy }, client);
 
     if (!balanced) {
       dd.increment('posting.imbalance', { journey: 'order-to-cash' });
@@ -172,7 +176,7 @@ async function postAllocation(id, { buggy = process.env.ALLOC_BUG === '1' } = {}
 
     dd.increment('posting.success', { journey: 'order-to-cash' });
     dd.gauge('posting.amount', debit, { journey: 'order-to-cash' });
-    return { allocationId: id, posted: true, debit, credit, lines: facts.length };
+    return { allocationId: id, posted: true, debit, credit, lines: facts.length, bugMode };
   });
 }
 

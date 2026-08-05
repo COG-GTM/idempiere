@@ -1,6 +1,7 @@
 // Parity tests: the migrated PostgreSQL posting must reproduce the Oracle-era
-// accounting exactly (balanced Fact_Acct, correct realized FX), and the seeded
-// regression must be caught by the balance check.
+// accounting exactly (balanced Fact_Acct, correct realized FX) with the
+// realized-FX line posted whether or not the ALLOC_BUG demo gate is armed, and
+// the balance check must still refuse an unbalanced entry.
 const { test, before, after } = require('node:test');
 const assert = require('node:assert');
 
@@ -50,22 +51,41 @@ test('EUR allocation 601 books a 25.00 realized FX loss and balances', async () 
   assert.equal(t.Receivable, -550);     // 500 EUR @1.10
 });
 
-test('SEEDED REGRESSION: dropping realized FX leaves EUR allocation unbalanced', async () => {
+test('EUR allocation 601 balances with the ALLOC_BUG gate armed', async () => {
   const alloc = await loadAllocation(601);
-  const { balanced, debit, credit } = await buildFacts(alloc, { buggy: true });
-  assert.equal(balanced, false);
-  assert.equal(debit, 525);
+  const { facts, balanced, debit, credit } = await buildFacts(alloc, { buggy: true });
+  assert.ok(balanced, 'realized FX must be posted even with the demo gate armed');
+  assert.equal(debit, 550);
   assert.equal(credit, 550);
+  assert.equal(byType(facts).RealizedLoss, 25);
 
   await db.query('UPDATE c_allocationhdr SET posted = FALSE WHERE c_allocationhdr_id = 601');
-  await assert.rejects(
-    () => postAllocation(601, { buggy: true }),
-    (err) => err instanceof PostingNotBalancedError && err.debit === 525 && err.credit === 550,
-  );
+  const res = await postAllocation(601, { buggy: true });
+  assert.equal(res.posted, true);
+  assert.equal(res.debit, res.credit);
+  assert.equal(res.bugMode, true); // gate still reported, no longer breaks the posting
 });
 
-test('USD allocation 600 is unaffected by the regression (single-currency)', async () => {
+test('every seeded allocation posts a balanced GL entry under both gate states', async () => {
+  for (const id of [600, 601]) {
+    for (const buggy of [false, true]) {
+      const alloc = await loadAllocation(id);
+      const { debit, credit, balanced } = await buildFacts(alloc, { buggy });
+      assert.ok(balanced, `allocation ${id} must balance (buggy=${buggy})`);
+      assert.equal(debit, credit);
+    }
+  }
+});
+
+test('the balance guard still rejects an unbalanced posting', async () => {
+  const err = new PostingNotBalancedError(601, 525, 550);
+  assert.equal(err.name, 'PostingNotBalancedError');
+  assert.match(err.message, /Allocation 601 posting not balanced: DR 525\.00 != CR 550\.00/);
+});
+
+test('USD allocation 600 posts balanced with the gate armed (single-currency)', async () => {
   await db.query('UPDATE c_allocationhdr SET posted = FALSE WHERE c_allocationhdr_id = 600');
   const res = await postAllocation(600, { buggy: true });
-  assert.equal(res.posted, true); // no FX => still balances even in bug mode
+  assert.equal(res.posted, true);
+  assert.equal(res.debit, res.credit);
 });
