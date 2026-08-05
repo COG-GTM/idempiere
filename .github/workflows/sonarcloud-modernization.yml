@@ -41,8 +41,14 @@ jobs:
         run: |
           npm ci
           npm run test:coverage
-          # lcov paths are relative to the service dir; Sonar resolves them from the repo root.
-          sed -i "s#^SF:#SF:modernization/services/o2c-allocation/#" coverage/lcov.info
+          # Sonar resolves SF: paths from the repo root. Node's lcov reporter has
+          # emitted both absolute and cwd-relative paths across releases, so strip
+          # any workspace prefix first and only then prefix relative paths.
+          sed -i -e "s#^SF:$GITHUB_WORKSPACE/#SF:#" \
+                 -e "s#^SF:\(src\|test\)/#SF:modernization/services/o2c-allocation/\1/#" \
+                 coverage/lcov.info
+          # Fail loudly rather than silently publishing a 0%-coverage report.
+          grep -q "^SF:modernization/services/o2c-allocation/src/allocation.js$" coverage/lcov.info
 
       # qualitygate.wait blocks only on pull_request: PRs must pass the gate,
       # master pushes don't wait on the branch gate.

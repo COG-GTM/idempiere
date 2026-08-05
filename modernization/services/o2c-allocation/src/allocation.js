@@ -185,10 +185,13 @@ function journalEmptyMessage(id, posted) {
 
 // Read back the GL journal a posted allocation produced, so an AR accountant can
 // verify the posting from the control panel instead of querying fact_acct directly.
-// Unposted allocations are not an error: the journal is simply empty.
+// Unposted allocations are not an error: the journal is simply empty. Dates are
+// formatted in SQL: a DATE decoded into a local-midnight JS Date renders as the
+// previous day through toISOString() in any timezone east of UTC.
 async function getAllocationJournal(id, client = db) {
   const hdr = (await client.query(
-    `SELECT c_allocationhdr_id, c_currency_id, datetrx, docstatus, posted
+    `SELECT c_allocationhdr_id, c_currency_id, docstatus, posted,
+            to_char(datetrx, 'YYYY-MM-DD') AS datetrx
        FROM c_allocationhdr WHERE c_allocationhdr_id = $1`,
     [id],
   )).rows[0];
@@ -200,7 +203,8 @@ async function getAllocationJournal(id, client = db) {
 
   const { rows } = await client.query(
     `SELECT f.fact_acct_id, f.account_id, e.acct_type, e.name AS account_name,
-            c.iso_code AS currency, f.amtacctdr, f.amtacctcr, f.description, f.dateacct
+            c.iso_code AS currency, f.amtacctdr, f.amtacctcr, f.description,
+            to_char(f.dateacct, 'YYYY-MM-DD') AS dateacct
        FROM fact_acct f
        JOIN acct_element e ON e.account_id = f.account_id
        JOIN c_currency c ON c.c_currency_id = f.c_currency_id
@@ -225,7 +229,7 @@ async function getAllocationJournal(id, client = db) {
       debit,
       credit,
       description: r.description,
-      dateacct: r.dateacct instanceof Date ? r.dateacct.toISOString().slice(0, 10) : r.dateacct,
+      dateacct: r.dateacct,
     };
   });
 
@@ -234,7 +238,7 @@ async function getAllocationJournal(id, client = db) {
   return {
     allocationId: id,
     posted: Boolean(hdr.posted),
-    dateTrx: hdr.datetrx instanceof Date ? hdr.datetrx.toISOString().slice(0, 10) : hdr.datetrx,
+    dateTrx: hdr.datetrx,
     accountingCurrency: ACCT_CURRENCY_ISO,
     lines,
     totals: { debit, credit, balanced: Math.abs(debit - credit) < EPSILON },
