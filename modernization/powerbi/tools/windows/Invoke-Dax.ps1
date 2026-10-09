@@ -16,7 +16,7 @@ $roots = @("$env:LOCALAPPDATA\Microsoft\Power BI Desktop\AnalysisServicesWorkspa
 $portFile = Get-ChildItem $roots -Recurse -Filter msmdsrv.port.txt -ErrorAction SilentlyContinue |
   Sort-Object LastWriteTime -Descending | Select-Object -First 1
 if (-not $portFile) { throw "No running Power BI Desktop model found. Open the .pbip and refresh first." }
-$port = (Get-Content $portFile.FullName -Raw).Trim([char]0, ' ', "`r", "`n")
+$port = (Get-Content $portFile.FullName -Raw -Encoding Unicode).Trim([char]0, ' ', "`r", "`n")
 
 # ADOMD client: Power BI Desktop ships one; fall back to the NuGet package.
 $dll = Get-ChildItem "$env:ProgramFiles\Microsoft Power BI Desktop\bin", "$env:ProgramFiles\WindowsApps" -Recurse `
