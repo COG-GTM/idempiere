@@ -37,6 +37,41 @@ table 'GL Journal'
 		displayFolder: Ledger
 		lineageTag: d72cda89-7bb5-5fd7-988c-94549fdc0e3a
 
+	/// Trial Balance beginning balance: TrialBalance.createBalanceLine() (LevelNo 0), AmtAcctDr - AmtAcctCr of actuals with DateAcct before the first selected date. Accounts where !isBalanceSheet() (Revenue/Expense) start at MPeriod.getFirstInYear(p_DateAcct_From)
+	measure 'Beginning Balance' =
+			VAR StartDate = MIN ( 'Date'[Date] )
+			VAR FiscalYear =
+			    CALCULATE ( MAX ( 'Period'[Year ID] ), REMOVEFILTERS ( 'Period' ), 'Period'[Start Date] <= StartDate, 'Period'[End Date] >= StartDate )
+			VAR YearStart =
+			    CALCULATE ( MIN ( 'Period'[Start Date] ), REMOVEFILTERS ( 'Period' ), 'Period'[Year ID] = FiscalYear )
+			VAR BalanceSheet =
+			    CALCULATE ( [Balance], REMOVEFILTERS ( 'Date' ), REMOVEFILTERS ( 'Period' ), 'Date'[Date] < StartDate, KEEPFILTERS ( 'Account'[Is Balance Sheet] = "Y" ) )
+			VAR ProfitLoss =
+			    CALCULATE ( [Balance], REMOVEFILTERS ( 'Date' ), REMOVEFILTERS ( 'Period' ), 'Date'[Date] < StartDate, 'Date'[Date] >= YearStart, KEEPFILTERS ( 'Account'[Is Balance Sheet] = "N" ) )
+			RETURN
+			    BalanceSheet + ProfitLoss
+		formatString: #,0.00
+		displayFolder: Trial Balance
+		lineageTag: c0a4426b-6e4c-4d5a-a4ea-a171ef2d7fec
+
+	/// Trial Balance period debits: TrialBalance.createDetailLines() (LevelNo 10), SUM(AmtAcctDr) with DateAcct in the selected range, PostingType A
+	measure 'Period Debit' = [Debit]
+		formatString: #,0.00
+		displayFolder: Trial Balance
+		lineageTag: 9521a9dc-5abd-49ec-9d0b-f01e6f477405
+
+	/// Trial Balance period credits: TrialBalance.createDetailLines() (LevelNo 10), SUM(AmtAcctCr) with DateAcct in the selected range, PostingType A
+	measure 'Period Credit' = [Credit]
+		formatString: #,0.00
+		displayFolder: Trial Balance
+		lineageTag: 14c3d2a8-c6de-4051-a351-3251adb7840e
+
+	/// Trial Balance ending balance: beginning line plus detail lines' AmtAcctBalance (AmtAcctDr - AmtAcctCr) in T_TrialBalance
+	measure 'Ending Balance' = [Beginning Balance] + [Period Debit] - [Period Credit]
+		formatString: #,0.00
+		displayFolder: Trial Balance
+		lineageTag: 4a683dda-ed07-4bcb-a873-6b1ec6f2bc91
+
 	column 'Fact Acct ID'
 		dataType: int64
 		isHidden

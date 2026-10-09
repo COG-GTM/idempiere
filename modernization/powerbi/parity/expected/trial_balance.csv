@@ -1,0 +1,34 @@
+account_value,account_name,account_type,beginning_balance,period_debit,period_credit,ending_balance
+11100,Checking Account,Asset,363447.82,1199526.39,963663.95,599310.26
+12110,Accounts Receivable - Trade,Asset,1013525.19,1019490.79,1198684.39,834331.59
+14120,Product asset,Asset,220449.63,504810.48,479674.37,245585.74
+16100,Land,Asset,150000.00,0,0,150000.00
+16200,Building,Asset,400000.00,0,0,400000.00
+17300,Equipment,Asset,120000.00,0,0,120000.00
+17400,Vehicles,Asset,45000.00,0,0,45000.00
+18120,Building Accumulated Depreciation,Asset,-23999.94,0.00,3999.99,-27999.93
+18230,Equipment Accumulated Depreciation,Asset,-18000.00,0.00,3000.00,-21000.00
+18240,Vehicles Accumulated Depreciation,Asset,-13500.00,0.00,2250.00,-15750.00
+21100,Accounts Payable Trade,Liability,-265840.66,531204.26,516712.48,-251348.88
+21610,Tax due,Liability,-476143.60,0.00,75517.90,-551661.50
+24200,Mortgage,Liability,-273000.00,4500.00,0.00,-268500.00
+31000,Capital/Common Stock,Owner's Equity,-500000.00,0,0,-500000.00
+32900,Retained Earnings,Owner's Equity,-285000.00,0,0,-285000.00
+41000,Trade Revenue,Revenue,-2191450.75,0.00,943972.89,-3135423.64
+51100,Product CoGs,Expense,1115802.46,479674.37,0.00,1595476.83
+60110,Wages,Expense,191196.06,98961.03,0.00,290157.09
+60130,Salaries,Expense,370034.10,191462.40,0.00,561496.50
+60410,FICA Tax,Expense,42923.70,21926.43,0.00,64850.13
+60510,Health Insurance Premium,Expense,37301.40,18437.58,0.00,55738.98
+61100,Rent Expense,Expense,134131.75,68686.16,0.00,202817.91
+61200,Utilities,Expense,16785.00,8703.00,0.00,25488.00
+62100,Media Advertising,Expense,24105.84,12792.36,0.00,36898.20
+63100,Telephone,Expense,6132.00,3199.00,0.00,9331.00
+66300,Outside Computer Services,Expense,13514.44,6710.15,0.00,20224.59
+67120,Building Depreciation,Expense,7999.98,3999.99,0.00,11999.97
+67230,Equipment Depreciation,Expense,6000.00,3000.00,0.00,9000.00
+67240,Vehicles Depreciation,Expense,4500.00,2250.00,0.00,6750.00
+70200,Bank Service Charges,Expense,2490.82,1247.24,0.00,3738.06
+72100,Office Expense,Expense,8126.56,4166.34,0.00,12292.90
+80100,Interest Income,Revenue,-1522.00,0.00,842.00,-2364.00
+82200,Mortgage Interest Expense,Expense,7140.00,3570.00,0.00,10710.00
