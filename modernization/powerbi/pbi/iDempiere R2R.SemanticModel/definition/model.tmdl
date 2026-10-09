@@ -1,0 +1,26 @@
+model Model
+	culture: en-US
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	discourageImplicitMeasures
+	sourceQueryCulture: en-US
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+annotation PBI_QueryOrder = ["Organization", "Account", "Period", "Date", "Business Partner", "BP Group", "Payment Term", "Invoice", "Payment", "GL Journal"]
+annotation __PBI_TimeIntelligenceEnabled = 0
+annotation iDempiere_Source = COG-GTM/idempiere Record-to-Report (Fact_Acct)
+
+ref table Organization
+ref table Account
+ref table 'Period'
+ref table 'Date'
+ref table 'Business Partner'
+ref table 'BP Group'
+ref table 'Payment Term'
+ref table Invoice
+ref table Payment
+ref table 'GL Journal'
+
+ref cultureInfo en-US
+

@@ -1,0 +1,24 @@
+c_bpartner_id,value,name,c_bp_group_id,iscustomer,isvendor
+120,C120,Joe Block,103,Y,N
+121,C121,C&W Construction,104,Y,N
+122,C122,"Patio Fun, Inc.",103,Y,N
+123,C123,Garden Design Studio,103,Y,N
+124,C124,Greenfield Landscaping,103,Y,N
+125,C125,Riverside Nursery,104,Y,N
+126,C126,Oak & Ivy Hotels,103,Y,N
+127,C127,Sunset Golf Club,103,Y,N
+128,C128,Hillcrest Schools,103,Y,N
+129,C129,Metro Parks Dept,104,Y,N
+130,C130,Blue Lake Resort,103,Y,N
+131,C131,Valley Homes,103,Y,N
+132,C132,Cedar Office Park,103,Y,N
+133,C133,Harbor Restaurants,104,Y,N
+134,C134,Northside Clinic,103,Y,N
+200,V200,Seed Farm Inc.,105,N,Y
+201,V201,Tree Farm Inc.,105,N,Y
+202,V202,Fertilizer Supply Co.,105,N,Y
+203,V203,Patio Furniture Mfg,105,N,Y
+204,V204,Tools & Hardware Ltd,105,N,Y
+205,V205,Garden Logistics,105,N,Y
+206,V206,Valley Utilities,105,N,Y
+207,V207,Brightline Telecom,105,N,Y

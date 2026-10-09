@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "SemanticModel",
+    "displayName": "iDempiere R2R"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "5d815498-123d-5d85-b1b1-2b841cfce227"
+  }
+}

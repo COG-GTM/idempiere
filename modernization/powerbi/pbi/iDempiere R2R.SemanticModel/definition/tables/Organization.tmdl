@@ -1,0 +1,40 @@
+table Organization
+	lineageTag: feddb28f-3935-50fa-87e7-7b70d275348a
+
+	column 'Org ID'
+		dataType: int64
+		isHidden
+		lineageTag: 56dfd478-1ac1-5dfb-87fb-9ad7178e966a
+		summarizeBy: none
+		sourceColumn: ad_org_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Org Key'
+		dataType: string
+		lineageTag: b8a7fcbb-973f-5a7b-bb11-d87603e5cdc8
+		summarizeBy: none
+		sourceColumn: value
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Org Name'
+		dataType: string
+		lineageTag: e5289475-60cc-5ab6-9e58-d0ee6de7580a
+		summarizeBy: none
+		sourceColumn: name
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Organization = m
+		mode: import
+		source =
+			let
+			    Source = Csv.Document(File.Contents(DataFolder & "\ad_org.csv"), [Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+			    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+			    Typed = Table.TransformColumnTypes(Promoted, {{"ad_org_id", Int64.Type}, {"value", type text}, {"name", type text}}, "en-US")
+			in
+			    Typed
+
+	annotation iDempiere_Table = ad_org
+

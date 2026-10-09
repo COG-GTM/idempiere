@@ -1,0 +1,7 @@
+// Power BI side of legacy/gl_period_balance.sql
+EVALUATE
+SUMMARIZECOLUMNS (
+    'Period'[Period Name],
+    "Debit", [Debit],
+    "Credit", [Credit]
+)

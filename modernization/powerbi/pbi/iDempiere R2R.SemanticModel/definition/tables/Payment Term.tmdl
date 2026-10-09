@@ -1,0 +1,40 @@
+table 'Payment Term'
+	lineageTag: 3ba85407-2d93-5e52-8968-c2a802f674ed
+
+	column 'Payment Term ID'
+		dataType: int64
+		isHidden
+		lineageTag: a0a15736-edc6-560b-95ed-da1b96b62de7
+		summarizeBy: none
+		sourceColumn: c_paymentterm_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Payment Term'
+		dataType: string
+		lineageTag: c339b636-c9ba-58cc-a7ef-54b42fef9bbd
+		summarizeBy: none
+		sourceColumn: name
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Net Days'
+		dataType: int64
+		lineageTag: dcbea3b9-fe07-5a83-9bbe-ca8477b800b0
+		summarizeBy: none
+		sourceColumn: netdays
+
+		annotation SummarizationSetBy = Automatic
+
+	partition 'Payment Term' = m
+		mode: import
+		source =
+			let
+			    Source = Csv.Document(File.Contents(DataFolder & "\c_paymentterm.csv"), [Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+			    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+			    Typed = Table.TransformColumnTypes(Promoted, {{"c_paymentterm_id", Int64.Type}, {"name", type text}, {"netdays", Int64.Type}}, "en-US")
+			in
+			    Typed
+
+	annotation iDempiere_Table = c_paymentterm
+

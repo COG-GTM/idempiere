@@ -1,0 +1,140 @@
+table Account
+	lineageTag: 6c97e1be-33db-5992-9368-0150fce2db54
+
+	column 'Account ID'
+		dataType: int64
+		isHidden
+		lineageTag: 60b830f9-d679-5678-bb7c-607b03b1ddbf
+		summarizeBy: none
+		sourceColumn: c_elementvalue_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Account Value'
+		dataType: string
+		lineageTag: 4463fc57-3d48-5d6d-8ae6-5f3228d96623
+		summarizeBy: none
+		sourceColumn: value
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Account Name'
+		dataType: string
+		lineageTag: 2e682c05-7a4f-5713-a33c-928a2141c399
+		summarizeBy: none
+		sourceColumn: name
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Account Type Code'
+		dataType: string
+		isHidden
+		lineageTag: 87837650-aa28-5c44-b140-f47c5e0fa925
+		summarizeBy: none
+		sourceColumn: accounttype
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Account Type'
+		dataType: string
+		lineageTag: ab47b466-3113-5f25-9004-a87d0f37f829
+		summarizeBy: none
+		sourceColumn: accounttype_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Account Sign'
+		dataType: string
+		isHidden
+		lineageTag: d0f25464-c6c4-5e2a-85cd-54918cc4d05e
+		summarizeBy: none
+		sourceColumn: accountsign
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Is Summary'
+		dataType: string
+		isHidden
+		lineageTag: 9e213c4d-0add-5a08-a8bd-fc60f26d2a21
+		summarizeBy: none
+		sourceColumn: issummary
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Parent ID'
+		dataType: int64
+		isHidden
+		lineageTag: c33952a8-8c8f-57a3-a88d-2b999f0c7628
+		summarizeBy: none
+		sourceColumn: parent_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Parent Value'
+		dataType: string
+		lineageTag: 964eec0d-0e86-5e77-9d6b-1d3004f9e5af
+		summarizeBy: none
+		sourceColumn: parent_value
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Level 1'
+		dataType: string
+		lineageTag: a237387b-6078-5c4f-bbaa-9fde9354966f
+		summarizeBy: none
+		sourceColumn: level1
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Level 2'
+		dataType: string
+		lineageTag: ad88a3be-f181-5428-a55b-66a004bedbf4
+		summarizeBy: none
+		sourceColumn: level2
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Level 3'
+		dataType: string
+		lineageTag: 3411f036-d40d-5e58-b330-823353ad236b
+		summarizeBy: none
+		sourceColumn: level3
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Is Balance Sheet'
+		dataType: string
+		lineageTag: 5974654a-c7f9-59fd-8add-50d81bb5f6ac
+		summarizeBy: none
+		sourceColumn: isbalancesheet
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Balance Sheet Line'
+		dataType: string
+		lineageTag: 0a7ed31d-5e56-5f33-9b62-2a75567d2ff4
+		summarizeBy: none
+		sourceColumn: balancesheet_line
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Profit Loss Line'
+		dataType: string
+		lineageTag: 3dbc7824-b2ac-5edd-83d0-73a6687c554a
+		summarizeBy: none
+		sourceColumn: profitloss_line
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Account = m
+		mode: import
+		source =
+			let
+			    Source = Csv.Document(File.Contents(DataFolder & "\c_elementvalue.csv"), [Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+			    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+			    Typed = Table.TransformColumnTypes(Promoted, {{"c_elementvalue_id", Int64.Type}, {"value", type text}, {"name", type text}, {"accounttype", type text}, {"accounttype_name", type text}, {"accountsign", type text}, {"issummary", type text}, {"parent_id", Int64.Type}, {"parent_value", type text}, {"level1", type text}, {"level2", type text}, {"level3", type text}, {"isbalancesheet", type text}, {"balancesheet_line", type text}, {"profitloss_line", type text}}, "en-US")
+			in
+			    Typed
+
+	annotation iDempiere_Table = c_elementvalue
+

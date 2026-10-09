@@ -1,0 +1,93 @@
+table Payment
+	lineageTag: 48bf06ad-44ac-572b-ad9d-55534a7d30e0
+
+	column 'Payment ID'
+		dataType: int64
+		isHidden
+		lineageTag: d408cc21-6faf-5894-881d-eeade23c2394
+		summarizeBy: none
+		sourceColumn: c_payment_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Document No'
+		dataType: string
+		lineageTag: b72c4529-93aa-5e75-ada2-93bc6b1b87bf
+		summarizeBy: none
+		sourceColumn: documentno
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Org ID'
+		dataType: int64
+		isHidden
+		lineageTag: 9bdc4a6b-9805-5ce6-98e7-a8cae051b22b
+		summarizeBy: none
+		sourceColumn: ad_org_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'BPartner ID'
+		dataType: int64
+		isHidden
+		lineageTag: 9c6eed1d-38bc-5352-bd17-81bb52e5474f
+		summarizeBy: none
+		sourceColumn: c_bpartner_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Invoice ID'
+		dataType: int64
+		isHidden
+		lineageTag: 55181b73-57d0-5ea6-b724-85a39601f7ee
+		summarizeBy: none
+		sourceColumn: c_invoice_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Is Receipt'
+		dataType: string
+		lineageTag: 3a4d3bb0-dab5-5d44-ac47-dce6a1cf5a1f
+		summarizeBy: none
+		sourceColumn: isreceipt
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Date Trx'
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		lineageTag: 89a21dcb-9cf0-5bdb-878a-3716cfd9c9f8
+		summarizeBy: none
+		sourceColumn: datetrx
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Pay Amt'
+		dataType: decimal
+		formatString: #,0.00
+		lineageTag: e4d5f414-0e0b-5852-a110-335d235546b0
+		summarizeBy: none
+		sourceColumn: payamt
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Doc Status'
+		dataType: string
+		lineageTag: ea353814-f604-54df-abd8-042f227ddd61
+		summarizeBy: none
+		sourceColumn: docstatus
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Payment = m
+		mode: import
+		source =
+			let
+			    Source = Csv.Document(File.Contents(DataFolder & "\c_payment.csv"), [Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+			    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+			    Typed = Table.TransformColumnTypes(Promoted, {{"c_payment_id", Int64.Type}, {"documentno", type text}, {"ad_org_id", Int64.Type}, {"c_bpartner_id", Int64.Type}, {"c_invoice_id", Int64.Type}, {"isreceipt", type text}, {"datetrx", type date}, {"payamt", Currency.Type}, {"docstatus", type text}}, "en-US")
+			in
+			    Typed
+
+	annotation iDempiere_Table = c_payment
+

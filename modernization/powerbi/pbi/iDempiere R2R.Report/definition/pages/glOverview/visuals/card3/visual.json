@@ -1,0 +1,60 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/schema.json",
+  "name": "card3",
+  "position": {
+    "x": 964,
+    "y": 104,
+    "z": 5,
+    "width": 300,
+    "height": 110
+  },
+  "visual": {
+    "visualType": "card",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "GL Journal"
+                    }
+                  },
+                  "Property": "Journal Lines"
+                }
+              },
+              "queryRef": "GL Journal.Journal Lines",
+              "nativeQueryRef": "Journal Lines",
+              "format": "#,0"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Journal Lines'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

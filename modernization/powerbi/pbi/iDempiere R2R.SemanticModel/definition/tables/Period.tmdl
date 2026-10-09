@@ -1,0 +1,77 @@
+table 'Period'
+	lineageTag: e6ceef51-1cc6-53fa-b621-479945182933
+
+	column 'Period ID'
+		dataType: int64
+		isHidden
+		lineageTag: eab829b7-5840-576f-92c0-5db5b3bb193c
+		summarizeBy: none
+		sourceColumn: c_period_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Year ID'
+		dataType: int64
+		isHidden
+		lineageTag: 06c7ef57-fe38-5393-9222-3ea28e77b667
+		summarizeBy: none
+		sourceColumn: c_year_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Period Name'
+		dataType: string
+		sortByColumn: 'Period Sort'
+		lineageTag: 87b63763-ffc1-52ea-93cd-6c8f10e95ce1
+		summarizeBy: none
+		sourceColumn: name
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Period No'
+		dataType: int64
+		lineageTag: 8a7d8a90-dbcc-5773-9f19-c3277c767aaa
+		summarizeBy: none
+		sourceColumn: periodno
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Start Date'
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		lineageTag: a20bbb8b-9a0a-5ba9-a4a5-8d06067dd9c2
+		summarizeBy: none
+		sourceColumn: startdate
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'End Date'
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		lineageTag: 6026eda2-9a61-5776-b5de-5c6fe16e94f7
+		summarizeBy: none
+		sourceColumn: enddate
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Period Sort'
+		dataType: int64
+		isHidden
+		lineageTag: d44e6ce3-a582-543d-b411-7da2831546d4
+		summarizeBy: none
+		sourceColumn: periodsort
+
+		annotation SummarizationSetBy = Automatic
+
+	partition 'Period' = m
+		mode: import
+		source =
+			let
+			    Source = Csv.Document(File.Contents(DataFolder & "\c_period.csv"), [Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+			    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+			    Typed = Table.TransformColumnTypes(Promoted, {{"c_period_id", Int64.Type}, {"c_year_id", Int64.Type}, {"name", type text}, {"periodno", Int64.Type}, {"startdate", type date}, {"enddate", type date}, {"periodsort", Int64.Type}}, "en-US")
+			in
+			    Typed
+
+	annotation iDempiere_Table = c_period
+

@@ -1,0 +1,74 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/schema.json",
+  "name": "tblType",
+  "position": {
+    "x": 792,
+    "y": 230,
+    "z": 7,
+    "width": 472,
+    "height": 474
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Account"
+                    }
+                  },
+                  "Property": "Account Type"
+                }
+              },
+              "queryRef": "Account.Account Type",
+              "nativeQueryRef": "Account Type"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "GL Journal"
+                    }
+                  },
+                  "Property": "Balance"
+                }
+              },
+              "queryRef": "GL Journal.Balance",
+              "nativeQueryRef": "Balance",
+              "format": "#,0.00"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Balance by account type'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,40 @@
+relationship a77bffae-34a1-5afa-b68a-f7b69a2e27d6
+	fromColumn: 'GL Journal'.'Account ID'
+	toColumn: Account.'Account ID'
+
+relationship e0645db2-467e-5ae4-8c81-9952809e426a
+	fromColumn: 'GL Journal'.'Org ID'
+	toColumn: Organization.'Org ID'
+
+relationship 5c4de263-5647-51c5-b711-176f0bf623a7
+	fromColumn: 'GL Journal'.'Period ID'
+	toColumn: 'Period'.'Period ID'
+
+relationship 42edc7cd-40e3-52c8-be53-a028f5e05fbd
+	fromColumn: 'GL Journal'.'Date Acct'
+	toColumn: 'Date'.'Date'
+
+relationship f14f938f-e73e-549d-b246-d3fa3ca6badc
+	fromColumn: 'GL Journal'.'BPartner ID'
+	toColumn: 'Business Partner'.'BPartner ID'
+
+relationship 23f02901-42cb-5052-8b50-9cbfc094f2cc
+	fromColumn: 'Business Partner'.'BP Group ID'
+	toColumn: 'BP Group'.'BP Group ID'
+
+relationship 263ec3f0-da0f-5ea9-bfb4-56605ee8ff30
+	fromColumn: Invoice.'BPartner ID'
+	toColumn: 'Business Partner'.'BPartner ID'
+
+relationship 1167080c-4d1e-5460-b71a-2bd164090306
+	fromColumn: Invoice.'Org ID'
+	toColumn: Organization.'Org ID'
+
+relationship 9cc64b34-84ca-5981-9686-4136f78a3a44
+	fromColumn: Invoice.'Payment Term ID'
+	toColumn: 'Payment Term'.'Payment Term ID'
+
+relationship 31d90333-c520-5e20-8f99-32b81974c9b9
+	fromColumn: Payment.'Invoice ID'
+	toColumn: Invoice.'Invoice ID'
+
