@@ -1,0 +1,14 @@
+// Power BI side of legacy/trial_balance.sql (L8N2-106, TrialBalance.java)
+// DateAcct 2026-07-01 .. 2026-09-30, all organizations; PostingType A is applied in the measures.
+EVALUATE
+SUMMARIZECOLUMNS (
+    'Account'[Account Value],
+    'Account'[Account Name],
+    'Account'[Account Type],
+    DATESBETWEEN ( 'Date'[Date], DATE ( 2026, 7, 1 ), DATE ( 2026, 9, 30 ) ),
+    "Beginning Balance", [Beginning Balance],
+    "Period Debit", [Period Debit],
+    "Period Credit", [Period Credit],
+    "Ending Balance", [Ending Balance]
+)
+ORDER BY 'Account'[Account Value]

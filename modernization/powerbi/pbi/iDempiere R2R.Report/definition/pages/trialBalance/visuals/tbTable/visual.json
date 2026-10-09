@@ -1,0 +1,165 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/schema.json",
+  "name": "tbTable",
+  "position": {
+    "x": 16,
+    "y": 230,
+    "z": 20,
+    "width": 1248,
+    "height": 474
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Account"
+                    }
+                  },
+                  "Property": "Account Value"
+                }
+              },
+              "queryRef": "Account.Account Value",
+              "nativeQueryRef": "Account Value"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Account"
+                    }
+                  },
+                  "Property": "Account Name"
+                }
+              },
+              "queryRef": "Account.Account Name",
+              "nativeQueryRef": "Account Name"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Account"
+                    }
+                  },
+                  "Property": "Account Type"
+                }
+              },
+              "queryRef": "Account.Account Type",
+              "nativeQueryRef": "Account Type"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "GL Journal"
+                    }
+                  },
+                  "Property": "Beginning Balance"
+                }
+              },
+              "queryRef": "GL Journal.Beginning Balance",
+              "nativeQueryRef": "Beginning Balance",
+              "format": "#,0.00"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "GL Journal"
+                    }
+                  },
+                  "Property": "Period Debit"
+                }
+              },
+              "queryRef": "GL Journal.Period Debit",
+              "nativeQueryRef": "Period Debit",
+              "format": "#,0.00"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "GL Journal"
+                    }
+                  },
+                  "Property": "Period Credit"
+                }
+              },
+              "queryRef": "GL Journal.Period Credit",
+              "nativeQueryRef": "Period Credit",
+              "format": "#,0.00"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "GL Journal"
+                    }
+                  },
+                  "Property": "Ending Balance"
+                }
+              },
+              "queryRef": "GL Journal.Ending Balance",
+              "nativeQueryRef": "Ending Balance",
+              "format": "#,0.00"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "Account"
+                  }
+                },
+                "Property": "Account Value"
+              }
+            },
+            "direction": "Ascending"
+          }
+        ],
+        "isDefaultSort": true
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Trial Balance by account'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

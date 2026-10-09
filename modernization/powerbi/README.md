@@ -6,7 +6,7 @@ legacy report logic. Part of the journey-led modernization: R2R is **Carry-Forwa
 
 | Legacy iDempiere report | Source | Power BI page |
 |---|---|---|
-| Trial Balance | `org.idempiere.acct/src/org/idempiere/acct/report/TrialBalance.java` | story |
+| Trial Balance | `org.idempiere.acct/src/org/idempiere/acct/report/TrialBalance.java` | Trial Balance (`trialBalance`, L8N2-106) |
 | Financial statements (Balance Sheet / P&L) | `org.idempiere.acct/src/org/idempiere/acct/report/FinReport.java` | story |
 | AR / AP Aging | `org.adempiere.base.process/src/org/compiere/process/Aging.java`, `MAging.java` | story |
 

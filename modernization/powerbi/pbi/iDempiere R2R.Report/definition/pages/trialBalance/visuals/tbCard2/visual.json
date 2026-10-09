@@ -1,0 +1,60 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/schema.json",
+  "name": "tbCard2",
+  "position": {
+    "x": 520,
+    "y": 104,
+    "z": 12,
+    "width": 236,
+    "height": 110
+  },
+  "visual": {
+    "visualType": "card",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "GL Journal"
+                    }
+                  },
+                  "Property": "Period Credit"
+                }
+              },
+              "queryRef": "GL Journal.Period Credit",
+              "nativeQueryRef": "Period Credit",
+              "format": "#,0.00"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Period credits'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
