@@ -1,0 +1,5 @@
+c_paymentterm_id,name,netdays
+105,Immediate,0
+106,30 Net,30
+107,2%10 Net 30,30
+108,60 Net,60

@@ -1,0 +1,65 @@
+table 'Business Partner'
+	lineageTag: f6692f4b-760b-5497-904f-19421cc58038
+
+	column 'BPartner ID'
+		dataType: int64
+		isHidden
+		lineageTag: c3f72657-f6a1-5fa5-a6ff-68156c465ef1
+		summarizeBy: none
+		sourceColumn: c_bpartner_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'BPartner Key'
+		dataType: string
+		lineageTag: 0b538fbc-5d5e-5ceb-8a22-be7cb6714d5a
+		summarizeBy: none
+		sourceColumn: value
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'BPartner Name'
+		dataType: string
+		lineageTag: 179d20b8-f610-53d1-97d5-bf609e68a559
+		summarizeBy: none
+		sourceColumn: name
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'BP Group ID'
+		dataType: int64
+		isHidden
+		lineageTag: 5daedeff-1ac1-5b9e-ba84-d8b8091096ec
+		summarizeBy: none
+		sourceColumn: c_bp_group_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Is Customer'
+		dataType: string
+		lineageTag: 9bcf0757-b317-5123-b681-7fe9409c8598
+		summarizeBy: none
+		sourceColumn: iscustomer
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Is Vendor'
+		dataType: string
+		lineageTag: d6ca2664-9eba-5a86-afe8-9cfd005094ac
+		summarizeBy: none
+		sourceColumn: isvendor
+
+		annotation SummarizationSetBy = Automatic
+
+	partition 'Business Partner' = m
+		mode: import
+		source =
+			let
+			    Source = Csv.Document(File.Contents(DataFolder & "\c_bpartner.csv"), [Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+			    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+			    Typed = Table.TransformColumnTypes(Promoted, {{"c_bpartner_id", Int64.Type}, {"value", type text}, {"name", type text}, {"c_bp_group_id", Int64.Type}, {"iscustomer", type text}, {"isvendor", type text}}, "en-US")
+			in
+			    Typed
+
+	annotation iDempiere_Table = c_bpartner
+

@@ -74,3 +74,36 @@ jobs:
           cache-dependency-path: modernization/services/o2c-allocation/package-lock.json
       - run: npm ci
       - run: npm test
+
+  r2r-powerbi:
+    name: R2R Power BI (model check + parity)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: modernization/powerbi
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: r2r
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d r2r"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: r2r
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - run: python -m r2r check
+      - run: python -m pytest -q tests

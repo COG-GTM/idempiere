@@ -1,0 +1,68 @@
+table 'Date'
+	lineageTag: e61dfa4c-0855-53ec-a999-3ba1721d8394
+
+	column 'Date'
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		lineageTag: 7bf4b0c7-19ce-5ec7-a770-725095eccee9
+		summarizeBy: none
+		sourceColumn: date
+
+		annotation SummarizationSetBy = Automatic
+
+	column Year
+		dataType: int64
+		lineageTag: 6b14ee97-72ab-5d4a-ab98-13f3a4f444bd
+		summarizeBy: none
+		sourceColumn: year
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Month No'
+		dataType: int64
+		isHidden
+		lineageTag: db2a07e0-3edd-561a-a90c-ba4ae55d2b93
+		summarizeBy: none
+		sourceColumn: monthno
+
+		annotation SummarizationSetBy = Automatic
+
+	column Month
+		dataType: string
+		sortByColumn: 'Month No'
+		lineageTag: 641b3eab-8674-5a5c-af71-bc6c450a9b23
+		summarizeBy: none
+		sourceColumn: monthname
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Year Month'
+		dataType: string
+		sortByColumn: 'Year Month Sort'
+		lineageTag: 93774b20-057a-535d-9987-5c376a704740
+		summarizeBy: none
+		sourceColumn: yearmonth
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Year Month Sort'
+		dataType: int64
+		isHidden
+		lineageTag: 11c3ef97-bfaa-5ab7-bce4-ee4b604fc9ca
+		summarizeBy: none
+		sourceColumn: yearmonthsort
+
+		annotation SummarizationSetBy = Automatic
+
+	partition 'Date' = m
+		mode: import
+		source =
+			let
+			    Source = Csv.Document(File.Contents(DataFolder & "\r2r_date.csv"), [Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+			    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+			    Typed = Table.TransformColumnTypes(Promoted, {{"date", type date}, {"year", Int64.Type}, {"monthno", Int64.Type}, {"monthname", type text}, {"yearmonth", type text}, {"yearmonthsort", Int64.Type}}, "en-US")
+			in
+			    Typed
+
+	annotation iDempiere_Table = r2r_date
+

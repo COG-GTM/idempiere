@@ -1,0 +1,93 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/1.0.0/schema.json",
+  "name": "colPeriod",
+  "position": {
+    "x": 16,
+    "y": 230,
+    "z": 9,
+    "width": 760,
+    "height": 474
+  },
+  "visual": {
+    "visualType": "clusteredColumnChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Period"
+                    }
+                  },
+                  "Property": "Period Name"
+                }
+              },
+              "queryRef": "Period.Period Name",
+              "nativeQueryRef": "Period Name"
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "GL Journal"
+                    }
+                  },
+                  "Property": "Debit"
+                }
+              },
+              "queryRef": "GL Journal.Debit",
+              "nativeQueryRef": "Debit",
+              "format": "#,0"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "GL Journal"
+                    }
+                  },
+                  "Property": "Credit"
+                }
+              },
+              "queryRef": "GL Journal.Credit",
+              "nativeQueryRef": "Credit",
+              "format": "#,0"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Debits and credits by period'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

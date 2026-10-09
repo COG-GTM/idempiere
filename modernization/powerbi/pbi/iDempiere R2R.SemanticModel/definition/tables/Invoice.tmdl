@@ -1,0 +1,120 @@
+table Invoice
+	lineageTag: 028766b7-4823-53ee-bb42-ebc0709bbb93
+
+	column 'Invoice ID'
+		dataType: int64
+		isHidden
+		lineageTag: 9611d2f0-4b30-593c-8f2f-4b48273c1b1c
+		summarizeBy: none
+		sourceColumn: c_invoice_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Document No'
+		dataType: string
+		lineageTag: 4eff6644-3a54-5948-8421-08eefd4bcf6f
+		summarizeBy: none
+		sourceColumn: documentno
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Org ID'
+		dataType: int64
+		isHidden
+		lineageTag: c6c8b72f-baec-502b-a77b-bac2ab685f08
+		summarizeBy: none
+		sourceColumn: ad_org_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'BPartner ID'
+		dataType: int64
+		isHidden
+		lineageTag: 0b36af80-812a-5e75-a69a-701a62cf6835
+		summarizeBy: none
+		sourceColumn: c_bpartner_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Is Sales'
+		dataType: string
+		lineageTag: 96a8e499-795f-5ad6-9740-f808fd9dab03
+		summarizeBy: none
+		sourceColumn: issotrx
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Date Invoiced'
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		lineageTag: 7cdf58ac-24a4-5bd4-82a2-e229518a71df
+		summarizeBy: none
+		sourceColumn: dateinvoiced
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Date Acct'
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		lineageTag: 3ea18a73-364c-5395-87e9-d5f670a979c8
+		summarizeBy: none
+		sourceColumn: dateacct
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Payment Term ID'
+		dataType: int64
+		isHidden
+		lineageTag: 98b25507-b8a8-521d-94dc-6d207569c16b
+		summarizeBy: none
+		sourceColumn: c_paymentterm_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Currency ID'
+		dataType: int64
+		isHidden
+		lineageTag: 7bde2b01-e9ad-5d27-ad95-9e118636b888
+		summarizeBy: none
+		sourceColumn: c_currency_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Total Lines'
+		dataType: decimal
+		formatString: #,0.00
+		lineageTag: b30c0741-abc3-5d5f-b8dd-e60376b0010c
+		summarizeBy: none
+		sourceColumn: totallines
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Grand Total'
+		dataType: decimal
+		formatString: #,0.00
+		lineageTag: 17d9f3ea-5866-55ab-821c-b4403909172b
+		summarizeBy: none
+		sourceColumn: grandtotal
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Doc Status'
+		dataType: string
+		lineageTag: 1393a562-8155-523f-9b27-ca1d7dba0571
+		summarizeBy: none
+		sourceColumn: docstatus
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Invoice = m
+		mode: import
+		source =
+			let
+			    Source = Csv.Document(File.Contents(DataFolder & "\c_invoice.csv"), [Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+			    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+			    Typed = Table.TransformColumnTypes(Promoted, {{"c_invoice_id", Int64.Type}, {"documentno", type text}, {"ad_org_id", Int64.Type}, {"c_bpartner_id", Int64.Type}, {"issotrx", type text}, {"dateinvoiced", type date}, {"dateacct", type date}, {"c_paymentterm_id", Int64.Type}, {"c_currency_id", Int64.Type}, {"totallines", Currency.Type}, {"grandtotal", Currency.Type}, {"docstatus", type text}}, "en-US")
+			in
+			    Typed
+
+	annotation iDempiere_Table = c_invoice
+

@@ -1,0 +1,215 @@
+table 'GL Journal'
+	lineageTag: 353dd9cd-474e-546b-997b-0f80a26d9b4a
+
+	/// Actual debits (PostingType A), as in every iDempiere accounting report
+	measure Debit = CALCULATE ( SUM ( 'GL Journal'[Amt Acct Dr] ), 'GL Journal'[Posting Type] = "A" )
+		formatString: #,0.00
+		displayFolder: Ledger
+		lineageTag: 2c3a681c-98f0-55fb-9508-e237a28df626
+
+	/// Actual credits (PostingType A)
+	measure Credit = CALCULATE ( SUM ( 'GL Journal'[Amt Acct Cr] ), 'GL Journal'[Posting Type] = "A" )
+		formatString: #,0.00
+		displayFolder: Ledger
+		lineageTag: d86cad61-7d61-5c81-8cc2-abf4c39bcbb7
+
+	/// AmtAcctDr - AmtAcctCr (iDempiere AmtAcctBalance)
+	measure Balance = [Debit] - [Credit]
+		formatString: #,0.00
+		displayFolder: Ledger
+		lineageTag: 1ba090b4-8511-5cc8-83be-cd7dfb75be59
+
+	/// Should always be 0: every posted document balances
+	measure 'Out Of Balance' = ROUND ( [Debit] - [Credit], 2 )
+		formatString: #,0.00
+		displayFolder: Ledger
+		lineageTag: 47532929-91e2-5e34-b169-fa39adf16a66
+
+	/// Budget postings (PostingType B)
+	measure 'Budget Balance' = CALCULATE ( SUM ( 'GL Journal'[Amt Acct Dr] ) - SUM ( 'GL Journal'[Amt Acct Cr] ), 'GL Journal'[Posting Type] = "B" )
+		formatString: #,0.00
+		displayFolder: Ledger
+		lineageTag: 873639b5-9af1-50da-9043-e9a27cb0a807
+
+	/// Actual Fact_Acct lines
+	measure 'Journal Lines' = CALCULATE ( COUNTROWS ( 'GL Journal' ), 'GL Journal'[Posting Type] = "A" )
+		formatString: #,0
+		displayFolder: Ledger
+		lineageTag: d72cda89-7bb5-5fd7-988c-94549fdc0e3a
+
+	column 'Fact Acct ID'
+		dataType: int64
+		isHidden
+		lineageTag: 1db28448-3b12-5b06-8d8d-b1444cc599ef
+		summarizeBy: none
+		sourceColumn: fact_acct_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Client ID'
+		dataType: int64
+		isHidden
+		lineageTag: 12946a66-1bcd-5473-9093-f162a03208cd
+		summarizeBy: none
+		sourceColumn: ad_client_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Org ID'
+		dataType: int64
+		isHidden
+		lineageTag: 80e31be3-d50b-5dec-bc43-629eb2d013e6
+		summarizeBy: none
+		sourceColumn: ad_org_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Acct Schema ID'
+		dataType: int64
+		isHidden
+		lineageTag: 9f4b5338-8642-5b87-b92f-6cfe229634a2
+		summarizeBy: none
+		sourceColumn: c_acctschema_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Account ID'
+		dataType: int64
+		isHidden
+		lineageTag: 98e05170-db83-51b6-b953-fcc368638bec
+		summarizeBy: none
+		sourceColumn: account_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Date Trx'
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		lineageTag: 4062a05a-d206-5e57-9557-f382f0956544
+		summarizeBy: none
+		sourceColumn: datetrx
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Date Acct'
+		dataType: dateTime
+		formatString: yyyy-mm-dd
+		lineageTag: 6ebd3951-8639-541a-bdbb-1f736acc611c
+		summarizeBy: none
+		sourceColumn: dateacct
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Period ID'
+		dataType: int64
+		isHidden
+		lineageTag: 06c1d830-5537-5c0d-971d-828763d9626f
+		summarizeBy: none
+		sourceColumn: c_period_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Table ID'
+		dataType: int64
+		isHidden
+		lineageTag: 7b2d62ef-a17e-5ecb-9948-8174797a2bda
+		summarizeBy: none
+		sourceColumn: ad_table_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Record ID'
+		dataType: int64
+		isHidden
+		lineageTag: efa5542e-38cd-5a58-b4f9-cac1825ab1f7
+		summarizeBy: none
+		sourceColumn: record_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Posting Type'
+		dataType: string
+		lineageTag: c360b68d-09d8-54e1-b3af-3517b1fa7ebb
+		summarizeBy: none
+		sourceColumn: postingtype
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Currency ID'
+		dataType: int64
+		isHidden
+		lineageTag: 83e71e7e-0707-5dd5-93bf-296b928d9c30
+		summarizeBy: none
+		sourceColumn: c_currency_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Source Debit'
+		dataType: decimal
+		formatString: #,0.00
+		isHidden
+		lineageTag: 9b623738-0545-50b1-8891-5b0b35168bbc
+		summarizeBy: none
+		sourceColumn: amtsourcedr
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Source Credit'
+		dataType: decimal
+		formatString: #,0.00
+		isHidden
+		lineageTag: 149d6b14-ada0-5fa9-ac9f-b05665088e46
+		summarizeBy: none
+		sourceColumn: amtsourcecr
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Amt Acct Dr'
+		dataType: decimal
+		formatString: #,0.00
+		isHidden
+		lineageTag: bec22fb7-de72-5730-8a57-b2f9c77182b9
+		summarizeBy: none
+		sourceColumn: amtacctdr
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Amt Acct Cr'
+		dataType: decimal
+		formatString: #,0.00
+		isHidden
+		lineageTag: ef54491c-da5b-5932-a54c-e542f499c8cd
+		summarizeBy: none
+		sourceColumn: amtacctcr
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'BPartner ID'
+		dataType: int64
+		isHidden
+		lineageTag: 48768eff-12d7-50be-8a8a-c0b7313b7c76
+		summarizeBy: none
+		sourceColumn: c_bpartner_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column Description
+		dataType: string
+		lineageTag: 4e79dfc9-774b-5c46-ae77-73f90832b526
+		summarizeBy: none
+		sourceColumn: description
+
+		annotation SummarizationSetBy = Automatic
+
+	partition 'GL Journal' = m
+		mode: import
+		source =
+			let
+			    Source = Csv.Document(File.Contents(DataFolder & "\fact_acct.csv"), [Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+			    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+			    Typed = Table.TransformColumnTypes(Promoted, {{"fact_acct_id", Int64.Type}, {"ad_client_id", Int64.Type}, {"ad_org_id", Int64.Type}, {"c_acctschema_id", Int64.Type}, {"account_id", Int64.Type}, {"datetrx", type date}, {"dateacct", type date}, {"c_period_id", Int64.Type}, {"ad_table_id", Int64.Type}, {"record_id", Int64.Type}, {"postingtype", type text}, {"c_currency_id", Int64.Type}, {"amtsourcedr", Currency.Type}, {"amtsourcecr", Currency.Type}, {"amtacctdr", Currency.Type}, {"amtacctcr", Currency.Type}, {"c_bpartner_id", Int64.Type}, {"description", type text}}, "en-US")
+			in
+			    Typed
+
+	annotation iDempiere_Table = fact_acct
+

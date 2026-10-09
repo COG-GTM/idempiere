@@ -1,0 +1,32 @@
+table 'BP Group'
+	lineageTag: cf12f107-991b-5a25-948a-0615c658516e
+
+	column 'BP Group ID'
+		dataType: int64
+		isHidden
+		lineageTag: e2e80a83-ff50-57ac-8c51-3f67bea14d67
+		summarizeBy: none
+		sourceColumn: c_bp_group_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'BP Group'
+		dataType: string
+		lineageTag: e8deda52-3400-55a6-a9a3-18a64a7cce80
+		summarizeBy: none
+		sourceColumn: name
+
+		annotation SummarizationSetBy = Automatic
+
+	partition 'BP Group' = m
+		mode: import
+		source =
+			let
+			    Source = Csv.Document(File.Contents(DataFolder & "\c_bp_group.csv"), [Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+			    Promoted = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+			    Typed = Table.TransformColumnTypes(Promoted, {{"c_bp_group_id", Int64.Type}, {"name", type text}}, "en-US")
+			in
+			    Typed
+
+	annotation iDempiere_Table = c_bp_group
+
