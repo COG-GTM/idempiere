@@ -1,4 +1,4 @@
-expression DataFolder = "C:\\idempiere\\modernization\\powerbi\\data" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+expression DataFolder = "C:\idempiere\modernization\powerbi\data" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
 	lineageTag: 23f216f8-3654-5de6-b650-4d76ceccfdf8
 	annotation PBI_ResultType = Text
 

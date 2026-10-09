@@ -10,5 +10,6 @@
   "settings": {
     "useStylableVisualContainerHeader": true,
     "defaultDrillFilterOtherVisuals": true
-  }
+  },
+  "layoutOptimization": "None"
 }
