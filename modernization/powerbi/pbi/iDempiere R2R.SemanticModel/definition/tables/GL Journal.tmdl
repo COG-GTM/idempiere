@@ -37,7 +37,7 @@ table 'GL Journal'
 		displayFolder: Ledger
 		lineageTag: d72cda89-7bb5-5fd7-988c-94549fdc0e3a
 
-	/// Trial Balance beginning balance: TrialBalance.createBalanceLine() (LevelNo 0), AmtAcctDr - AmtAcctCr of actuals with DateAcct before the first selected date. Accounts where !isBalanceSheet() (Revenue/Expense) start at MPeriod.getFirstInYear(p_DateAcct_From)
+	/// Trial Balance beginning balance: TrialBalance.createBalanceLine() (LevelNo 0), AmtAcctDr - AmtAcctCr of actuals with DateAcct before the first selected date. Accounts where !isBalanceSheet() (Revenue/Expense) start at MPeriod.getFirstInYear(p_DateAcct_From). Blank when the opening balance is 0 and there are no period lines (doIt() deletes those accounts)
 	measure 'Beginning Balance' =
 			VAR StartDate = MIN ( 'Date'[Date] )
 			VAR FiscalYear =
@@ -48,8 +48,9 @@ table 'GL Journal'
 			    CALCULATE ( [Balance], REMOVEFILTERS ( 'Date' ), REMOVEFILTERS ( 'Period' ), 'Date'[Date] < StartDate, KEEPFILTERS ( 'Account'[Is Balance Sheet] = "Y" ) )
 			VAR ProfitLoss =
 			    CALCULATE ( [Balance], REMOVEFILTERS ( 'Date' ), REMOVEFILTERS ( 'Period' ), 'Date'[Date] < StartDate, 'Date'[Date] >= YearStart, KEEPFILTERS ( 'Account'[Is Balance Sheet] = "N" ) )
+			VAR Opening = BalanceSheet + ProfitLoss
 			RETURN
-			    BalanceSheet + ProfitLoss
+			    IF ( Opening = 0 && ISBLANK ( [Journal Lines] ), BLANK (), Opening )
 		formatString: #,0.00
 		displayFolder: Trial Balance
 		lineageTag: c0a4426b-6e4c-4d5a-a4ea-a171ef2d7fec
