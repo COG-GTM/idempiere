@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Order-to-Cash Modernization — Operations Dashboard</title>
+  <style>
+    :root {
+      --bg: #f6f8fb; --panel: #ffffff; --border: #e4e8ef; --fg: #1b2333;
+      --muted: #64748b; --accent: #2563eb; --green: #16a34a; --amber: #d97706;
+      --red: #dc2626; --track: #eef2f7; --shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.04);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--fg);
+      font: 14px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    header { background: var(--panel); border-bottom: 1px solid var(--border); padding: 20px 40px; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .logo { width: 30px; height: 30px; border-radius: 7px;
+      background: linear-gradient(135deg, #2563eb, #7c3aed); flex: none; }
+    h1 { margin: 0; font-size: 18px; font-weight: 650; letter-spacing: -.01em; }
+    .phase { margin-top: 2px; color: var(--muted); font-size: 13px; }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 24px 40px 56px; }
+    section { margin-top: 28px; }
+    h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+      margin: 0 0 12px; font-weight: 650; }
+    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+    .kpi { background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+      padding: 16px 18px; box-shadow: var(--shadow); }
+    .kpi .l { color: var(--muted); font-size: 12px; }
+    .kpi .v { font-size: 26px; font-weight: 700; letter-spacing: -.02em; margin: 4px 0 2px; }
+    .kpi .s { color: var(--muted); font-size: 12px; }
+    .kpi .t { display: inline-block; margin-top: 8px; font-size: 11px; font-weight: 600;
+      padding: 2px 8px; border-radius: 999px; background: rgba(37,99,235,.08); color: var(--accent); }
+    .kpi .t.good { background: rgba(22,163,74,.10); color: var(--green); }
+    .grid2 { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; align-items: start; }
+    @media (max-width: 860px) { .grid2 { grid-template-columns: 1fr; } }
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+      box-shadow: var(--shadow); overflow: hidden; }
+    .panel .hd { padding: 14px 18px; border-bottom: 1px solid var(--border); font-weight: 650; font-size: 14px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 11px 18px; border-bottom: 1px solid var(--border); font-size: 13px; }
+    tbody tr:last-child td { border-bottom: none; }
+    th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+    .tag { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+    .tag.rewrite { background: rgba(220,38,38,.10); color: var(--red); }
+    .tag.refactor { background: rgba(217,119,6,.12); color: var(--amber); }
+    .tag.carryforward { background: rgba(22,163,74,.10); color: var(--green); }
+    .st { font-weight: 600; }
+    .st.live { color: var(--green); }
+    .st.planned { color: var(--accent); }
+    .st.backlog { color: var(--muted); }
+    .bar { height: 7px; border-radius: 999px; background: var(--track); overflow: hidden; margin-top: 6px; }
+    .bar > i { display: block; height: 100%; background: linear-gradient(90deg,#2563eb,#16a34a); }
+    .pass { color: var(--green); font-weight: 650; }
+    .stat { display: flex; justify-content: space-between; padding: 11px 18px; border-bottom: 1px solid var(--border); }
+    .stat:last-child { border-bottom: none; }
+    .stat .l { color: var(--muted); }
+    .stat .v { font-weight: 650; font-variant-numeric: tabular-nums; }
+    .foot { color: var(--muted); font-size: 12px; margin-top: 32px; }
+    code { background: #eef2f7; padding: 1px 6px; border-radius: 5px; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="logo"></div>
+      <div>
+        <h1>Order-to-Cash Modernization — Operations Dashboard</h1>
+        <div class="phase" id="phase"></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <section>
+      <h2>Program KPIs</h2>
+      <div class="kpis" id="kpis"></div>
+    </section>
+
+    <section class="grid2">
+      <div class="panel">
+        <div class="hd">Migration portfolio — user journeys</div>
+        <table id="portfolio"><thead><tr>
+          <th>Journey</th><th>Disposition</th><th>Status</th><th style="width:170px">Progress</th>
+        </tr></thead><tbody></tbody></table>
+      </div>
+      <div class="panel">
+        <div class="hd" id="svc-hd">Live service health</div>
+        <div id="service"></div>
+      </div>
+    </section>
+
+    <section class="grid2">
+      <div class="panel">
+        <div class="hd">Data-migration parity — Oracle vs PostgreSQL</div>
+        <table id="parity"><thead><tr>
+          <th>Check</th><th>Records compared</th><th>Result</th>
+        </tr></thead><tbody></tbody></table>
+      </div>
+      <div class="panel">
+        <div class="hd" id="del-hd">Delivery quality</div>
+        <div id="delivery"></div>
+      </div>
+    </section>
+
+    <div class="foot" id="foot"></div>
+  </div>
+
+  <script src="data.js"></script>
+  <script>
+    const d = window.DASHBOARD;
+    const el = id => document.getElementById(id);
+    const cls = s => s.toLowerCase().replace(/[^a-z]/g, "");
+
+    el("phase").textContent = d.phase;
+
+    el("kpis").innerHTML = d.kpis.map(k => {
+      const good = /-9|within|stable|on track|\+/.test(k.trend);
+      return `<div class="kpi"><div class="l">${k.label}</div>
+        <div class="v">${k.value}</div><div class="s">${k.sub}</div>
+        <div class="t ${good ? "good" : ""}">${k.trend}</div></div>`;
+    }).join("");
+
+    const statusClass = s => cls(s.split(" ")[0]);
+    document.querySelector("#portfolio tbody").innerHTML = d.portfolio.map(p => `
+      <tr>
+        <td><strong>${p.journey}</strong><br><span style="color:var(--muted);font-size:12px">${p.note}</span></td>
+        <td><span class="tag ${cls(p.disposition)}">${p.disposition}</span></td>
+        <td><span class="st ${statusClass(p.status)}">${p.status}</span></td>
+        <td>${p.progress}%<div class="bar"><i style="width:${p.progress}%"></i></div></td>
+      </tr>`).join("");
+
+    el("svc-hd").textContent = `Live service health — ${d.service.name}`;
+    el("service").innerHTML = d.service.metrics.map(m =>
+      `<div class="stat"><span class="l">${m.label}</span><span class="v">${m.value}</span></div>`).join("");
+
+    document.querySelector("#parity tbody").innerHTML = d.parity.map(p => `
+      <tr><td>${p.check}</td><td>${p.records}</td>
+      <td class="pass">✓ ${p.result}</td></tr>`).join("");
+
+    el("del-hd").textContent = `Delivery quality — ${d.delivery.sprint}`;
+    el("delivery").innerHTML = d.delivery.metrics.map(m =>
+      `<div class="stat"><span class="l">${m.label}</span><span class="v">${m.value}</span></div>`).join("");
+
+    el("foot").innerHTML = `${d.program} · snapshot ${d.generatedAt}`;
+  </script>
+</body>
+</html>
