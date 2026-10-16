@@ -48,8 +48,8 @@ app.post('/allocations/:id/post', async (req, res, next) => {
   } catch (err) {
     if (err.statusCode === 404) return res.status(404).json({ error: err.message });
     sentry.capturePostingError(err, { allocationId: id, debit: err.debit, credit: err.credit });
-    await sentry.flushEvents();
     if (err.name === 'PostingNotBalancedError') {
+      await sentry.flushEvents();
       return res.status(422).json({ error: err.message, allocationId: id, debit: err.debit, credit: err.credit });
     }
     next(err);
@@ -69,8 +69,9 @@ app.post('/allocations/recompute', async (req, res, next) => {
 });
 
 sentry.expressErrorHandler(app);
-app.use((err, _req, res, _next) => {
+app.use(async (err, _req, res, _next) => {
   console.error('[server] unhandled:', err.message);
+  await sentry.flushEvents();
   res.status(500).json({ error: err.message });
 });
 
