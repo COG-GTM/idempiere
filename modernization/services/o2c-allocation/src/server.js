@@ -17,7 +17,7 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 app.get('/health', async (_req, res) => {
   try {
     await db.query('SELECT 1');
-    res.json({ status: 'ok', service: 'o2c-allocation', bugMode: process.env.ALLOC_BUG === '1' });
+    res.json({ status: 'ok', service: 'o2c-allocation' });
   } catch (e) {
     res.status(503).json({ status: 'degraded', error: e.message });
   }
