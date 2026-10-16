@@ -138,7 +138,7 @@ async function buildFacts(allocation, { buggy = false } = {}, client = db) {
 }
 
 // Post an allocation: build facts, enforce balance, persist to fact_acct.
-async function postAllocation(id, { buggy = process.env.ALLOC_BUG === '1' } = {}) {
+async function postAllocation(id, { buggy = false } = {}) {
   return db.withTransaction(async (client) => {
     const allocation = await loadAllocation(id, client);
     if (!allocation) {
