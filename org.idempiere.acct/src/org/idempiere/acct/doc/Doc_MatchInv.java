@@ -1474,7 +1474,7 @@ public class Doc_MatchInv extends Doc
 		BigDecimal invoiceAccounted = null;
 		//
 		StringBuilder sql = new StringBuilder()
-			.append("SELECT SUM(AmtSourceDr), SUM(AmtAcctDr), SUM(AmtSourceCr), SUM(AmtAcctCr)")
+			.append("SELECT COALESCE(SUM(AmtSourceDr),0), COALESCE(SUM(AmtAcctDr),0), COALESCE(SUM(AmtSourceCr),0), COALESCE(SUM(AmtAcctCr),0)")
 			.append(" FROM Fact_Acct ")
 			.append("WHERE AD_Table_ID=? AND Record_ID=?")
 			.append(" AND C_AcctSchema_ID=?")
@@ -1611,7 +1611,7 @@ public class Doc_MatchInv extends Doc
 		}
 		
 		StringBuilder sqlInv = new StringBuilder()
-				.append("SELECT SUM(AmtSourceDr)-SUM(AmtSourceCr), SUM(AmtAcctDr)-SUM(AmtAcctCr)")
+				.append("SELECT COALESCE(SUM(AmtSourceDr),0)-COALESCE(SUM(AmtSourceCr),0), COALESCE(SUM(AmtAcctDr),0)-COALESCE(SUM(AmtAcctCr),0)")
 				.append(" FROM Fact_Acct ")
 				.append("WHERE AD_Table_ID=? AND Record_ID=?")
 				.append(" AND C_AcctSchema_ID=?")
@@ -1790,7 +1790,7 @@ public class Doc_MatchInv extends Doc
 						continue;
 					
 					StringBuilder sql = new StringBuilder()
-						.append("SELECT SUM(AmtSourceDr), SUM(AmtAcctDr), SUM(AmtSourceCr), SUM(AmtAcctCr)")
+						.append("SELECT COALESCE(SUM(AmtSourceDr),0), COALESCE(SUM(AmtAcctDr),0), COALESCE(SUM(AmtSourceCr),0), COALESCE(SUM(AmtAcctCr),0)")
 						.append(" FROM Fact_Acct ")
 						.append("WHERE AD_Table_ID=? AND (Record_ID=? OR Record_ID=?)")	//	match inv
 						.append(" AND C_AcctSchema_ID=?")
@@ -1841,7 +1841,7 @@ public class Doc_MatchInv extends Doc
 					}
 					
 					sql = new StringBuilder()
-						.append("SELECT SUM(AmtSourceDr), SUM(AmtAcctDr), SUM(AmtSourceCr), SUM(AmtAcctCr)")
+						.append("SELECT COALESCE(SUM(AmtSourceDr),0), COALESCE(SUM(AmtAcctDr),0), COALESCE(SUM(AmtSourceCr),0), COALESCE(SUM(AmtAcctCr),0)")
 						.append(" FROM Fact_Acct ")
 						.append("WHERE AD_Table_ID=? AND (Record_ID=? OR Record_ID=?)")	//	match inv
 						.append(" AND C_AcctSchema_ID=?")
@@ -2016,7 +2016,7 @@ public class Doc_MatchInv extends Doc
 			HashMap<Integer, ArrayList<FactLine>> htFactLineInv, ArrayList<FactLine> invRoundingLines, HashMap<Integer, ArrayList<FactLine>> htRoundingLineInv) 
 	{
 		StringBuilder sqlInvLine = new StringBuilder()
-				.append("SELECT SUM(AmtSourceDr)-SUM(AmtSourceCr), SUM(AmtAcctDr)-SUM(AmtAcctCr)")
+				.append("SELECT COALESCE(SUM(AmtSourceDr),0)-COALESCE(SUM(AmtSourceCr),0), COALESCE(SUM(AmtAcctDr),0)-COALESCE(SUM(AmtAcctCr),0)")
 				.append(" FROM Fact_Acct ")
 				.append("WHERE AD_Table_ID=? AND Record_ID=? AND Line_ID=?")
 				.append(" AND C_AcctSchema_ID=?")
@@ -2092,7 +2092,7 @@ public class Doc_MatchInv extends Doc
 						continue;
 					
 					StringBuilder sql = new StringBuilder()
-						.append("SELECT SUM(AmtSourceDr), SUM(AmtAcctDr), SUM(AmtSourceCr), SUM(AmtAcctCr)")
+						.append("SELECT COALESCE(SUM(AmtSourceDr),0), COALESCE(SUM(AmtAcctDr),0), COALESCE(SUM(AmtSourceCr),0), COALESCE(SUM(AmtAcctCr),0)")
 						.append(" FROM Fact_Acct ")
 						.append("WHERE AD_Table_ID=? AND (Record_ID=? OR Record_ID=?)")	//	match inv
 						.append(" AND C_AcctSchema_ID=?")
@@ -2150,7 +2150,7 @@ public class Doc_MatchInv extends Doc
 					}
 					
 					sql = new StringBuilder()
-						.append("SELECT SUM(AmtSourceDr), SUM(AmtAcctDr), SUM(AmtSourceCr), SUM(AmtAcctCr)")
+						.append("SELECT COALESCE(SUM(AmtSourceDr),0), COALESCE(SUM(AmtAcctDr),0), COALESCE(SUM(AmtSourceCr),0), COALESCE(SUM(AmtAcctCr),0)")
 						.append(" FROM Fact_Acct ")
 						.append("WHERE AD_Table_ID=? AND (Record_ID=? OR Record_ID=?)")	//	match inv
 						.append(" AND C_AcctSchema_ID=?")
@@ -2290,7 +2290,7 @@ public class Doc_MatchInv extends Doc
 		BigDecimal receiptAccounted = null;
 		//
 		StringBuilder sql = new StringBuilder()
-			.append("SELECT SUM(AmtSourceDr), SUM(AmtAcctDr), SUM(AmtSourceCr), SUM(AmtAcctCr)")
+			.append("SELECT COALESCE(SUM(AmtSourceDr),0), COALESCE(SUM(AmtAcctDr),0), COALESCE(SUM(AmtSourceCr),0), COALESCE(SUM(AmtAcctCr),0)")
 			.append(" FROM Fact_Acct ")
 			.append("WHERE AD_Table_ID=? AND Record_ID=?")
 			.append(" AND C_AcctSchema_ID=?")
@@ -2417,7 +2417,7 @@ public class Doc_MatchInv extends Doc
 		}
 		
 		StringBuilder sqlMR = new StringBuilder()
-				.append("SELECT SUM(AmtSourceDr)-SUM(AmtSourceCr), SUM(AmtAcctDr)-SUM(AmtAcctCr)")
+				.append("SELECT COALESCE(SUM(AmtSourceDr),0)-COALESCE(SUM(AmtSourceCr),0), COALESCE(SUM(AmtAcctDr),0)-COALESCE(SUM(AmtAcctCr),0)")
 				.append(" FROM Fact_Acct ")
 				.append("WHERE AD_Table_ID=? AND Record_ID=?")
 				.append(" AND C_AcctSchema_ID=?")
@@ -2516,7 +2516,7 @@ public class Doc_MatchInv extends Doc
 				continue;
 			
 			StringBuilder sql = new StringBuilder()
-				.append("SELECT SUM(AmtSourceDr), SUM(AmtAcctDr), SUM(AmtSourceCr), SUM(AmtAcctCr)")
+				.append("SELECT COALESCE(SUM(AmtSourceDr),0), COALESCE(SUM(AmtAcctDr),0), COALESCE(SUM(AmtSourceCr),0), COALESCE(SUM(AmtAcctCr),0)")
 				.append(" FROM Fact_Acct ")
 				.append("WHERE AD_Table_ID=? AND Record_ID=?")	//	match inv
 				.append(" AND C_AcctSchema_ID=?")
@@ -2559,7 +2559,7 @@ public class Doc_MatchInv extends Doc
 			}
 			
 			sql = new StringBuilder()
-				.append("SELECT SUM(AmtSourceDr), SUM(AmtAcctDr), SUM(AmtSourceCr), SUM(AmtAcctCr)")
+				.append("SELECT COALESCE(SUM(AmtSourceDr),0), COALESCE(SUM(AmtAcctDr),0), COALESCE(SUM(AmtSourceCr),0), COALESCE(SUM(AmtAcctCr),0)")
 				.append(" FROM Fact_Acct ")
 				.append("WHERE AD_Table_ID=? AND Record_ID=?")	//	match inv
 				.append(" AND C_AcctSchema_ID=?")
@@ -2703,7 +2703,7 @@ public class Doc_MatchInv extends Doc
 		BigDecimal mrLineAccounted = null;
 			
 		StringBuilder sqlMRLine = new StringBuilder()
-				.append("SELECT SUM(AmtSourceDr)-SUM(AmtSourceCr), SUM(AmtAcctDr)-SUM(AmtAcctCr)")
+				.append("SELECT COALESCE(SUM(AmtSourceDr),0)-COALESCE(SUM(AmtSourceCr),0), COALESCE(SUM(AmtAcctDr),0)-COALESCE(SUM(AmtAcctCr),0)")
 				.append(" FROM Fact_Acct ")
 				.append("WHERE AD_Table_ID=? AND Record_ID=? AND Line_ID=?")
 				.append(" AND C_AcctSchema_ID=?")
@@ -2751,7 +2751,7 @@ public class Doc_MatchInv extends Doc
 				continue;
 			
 			StringBuilder sql = new StringBuilder()
-				.append("SELECT SUM(AmtSourceDr), SUM(AmtAcctDr), SUM(AmtSourceCr), SUM(AmtAcctCr)")
+				.append("SELECT COALESCE(SUM(AmtSourceDr),0), COALESCE(SUM(AmtAcctDr),0), COALESCE(SUM(AmtSourceCr),0), COALESCE(SUM(AmtAcctCr),0)")
 				.append(" FROM Fact_Acct ")
 				.append("WHERE AD_Table_ID=? AND Record_ID=?")	//	match inv
 				.append(" AND C_AcctSchema_ID=?")
@@ -2792,7 +2792,7 @@ public class Doc_MatchInv extends Doc
 			}
 			
 			sql = new StringBuilder()
-				.append("SELECT SUM(AmtSourceDr), SUM(AmtAcctDr), SUM(AmtSourceCr), SUM(AmtAcctCr)")
+				.append("SELECT COALESCE(SUM(AmtSourceDr),0), COALESCE(SUM(AmtAcctDr),0), COALESCE(SUM(AmtSourceCr),0), COALESCE(SUM(AmtAcctCr),0)")
 				.append(" FROM Fact_Acct ")
 				.append("WHERE AD_Table_ID=? AND Record_ID=?")	//	match inv
 				.append(" AND C_AcctSchema_ID=?")

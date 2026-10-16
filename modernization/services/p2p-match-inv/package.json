@@ -1,0 +1,15 @@
+{
+  "name": "p2p-match-inv-parity",
+  "version": "1.0.0",
+  "description": "P2P Slice 2 parity test: match-invoice posting (NotInvoicedReceipts DR / InventoryClearing CR / IPV) on PostgreSQL-native SQL.",
+  "type": "commonjs",
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "pg": "^8.13.1"
+  }
+}
