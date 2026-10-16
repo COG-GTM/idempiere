@@ -4,7 +4,7 @@ const path = require('path');
 const db = require('./db');
 
 async function migrate() {
-  if (db.isEmbeddedDb && db.isEmbeddedDb()) {
+  if (db.isEmbeddedDb?.()) {
     await db.ensureReady();
     console.log('[migrate] embedded schema + seed applied.');
     return;
