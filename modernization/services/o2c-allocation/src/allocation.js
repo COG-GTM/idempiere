@@ -81,9 +81,7 @@ async function loadAllocation(id, client = db) {
 }
 
 // Build the balanced Fact_Acct lines for one allocation.
-// `buggy` reintroduces a regression (the realized FX balancing entry is dropped),
-// which leaves multi-currency allocations unbalanced — the seeded break.
-async function buildFacts(allocation, { buggy = false } = {}, client = db) {
+async function buildFacts(allocation, _opts = {}, client = db) {
   const { hdr, lines } = allocation;
   const facts = [];
   let totalDr = 0;
@@ -122,9 +120,8 @@ async function buildFacts(allocation, { buggy = false } = {}, client = db) {
     // Realized FX gain/loss balances the line when settle-rate != booking-rate.
     const settledDr = cashAcct + discountAcct + writeoffAcct;
     const realized = round2(arAcct - settledDr);
-    if (!buggy && realized !== 0) {
+    if (realized !== 0) {
       if (realized > 0) {
-        // Debits short of the AR credit => realized LOSS (debit).
         push('RealizedLoss', 305, realized, 0, 'Realized FX loss');
       } else {
         push('RealizedGain', 304, 0, -realized, 'Realized FX gain');
@@ -138,7 +135,7 @@ async function buildFacts(allocation, { buggy = false } = {}, client = db) {
 }
 
 // Post an allocation: build facts, enforce balance, persist to fact_acct.
-async function postAllocation(id, { buggy = process.env.ALLOC_BUG === '1' } = {}) {
+async function postAllocation(id) {
   return db.withTransaction(async (client) => {
     const allocation = await loadAllocation(id, client);
     if (!allocation) {
@@ -150,7 +147,7 @@ async function postAllocation(id, { buggy = process.env.ALLOC_BUG === '1' } = {}
       return { allocationId: id, alreadyPosted: true };
     }
 
-    const { facts, debit, credit, balanced } = await buildFacts(allocation, { buggy }, client);
+    const { facts, debit, credit, balanced } = await buildFacts(allocation, {}, client);
 
     if (!balanced) {
       dd.increment('posting.imbalance', { journey: 'order-to-cash' });
