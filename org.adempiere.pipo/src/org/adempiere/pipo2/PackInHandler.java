@@ -25,6 +25,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 import java.util.Set;
 import java.util.Stack;
 import java.util.logging.Level;
@@ -74,6 +75,13 @@ public class PackInHandler extends DefaultHandler {
     private int AD_Package_Imp_ID=0;
 	private int AD_Package_Imp_Inst_ID=0;
     private static final CLogger log = CLogger.getCLogger(PackInHandler.class);
+
+	private static final Set<String> SYSTEM_ONLY_ELEMENTS = Set.of("ShellScript", "ScriptJSR223", "SQLStatement", "SQLMandatory");
+	private static final Set<String> SYSTEM_ONLY_HANDLER_CLASSES = Set.of(
+			"org.adempiere.pipo2.handler.ShellScriptElementHandler",
+			"org.adempiere.pipo2.handler.ScriptJSR223ElementHandler",
+			"org.adempiere.pipo2.handler.SQLStatementElementHandler",
+			"org.adempiere.pipo2.handler.SQLMandatoryElementHandler");
 	private boolean isInit = false;
 	private String packageStatus = MPackageImp.PACKAGE_STATUS_INSTALLING;
 	private PIPOContext m_ctx = null;
@@ -97,6 +105,27 @@ public class PackInHandler extends DefaultHandler {
 			m_ctx.trx = Trx.get("PackIn", true);
 
 		isInit=true;
+	}
+
+	private static boolean isSystemOnlyElement(Element element, ElementHandler handler) {
+		return SYSTEM_ONLY_ELEMENTS.contains(element.getElementValue())
+				|| SYSTEM_ONLY_HANDLER_CLASSES.contains(handler.getClass().getName());
+	}
+
+	/**
+	 * Elements that execute code (shell, JSR223 script, SQL) are only allowed for the System tenant with a System role.
+	 * A context without role (server startup activators) is accepted when the tenant is System.
+	 */
+	private boolean isSystemSession() {
+		Properties ctx = m_ctx.ctx;
+		if (Env.getAD_Client_ID(ctx) != 0)
+			return false;
+		if (Util.isEmpty(Env.getContext(ctx, Env.AD_ROLE_ID)))
+			return true;
+		MRole role = MRole.get(ctx, Env.getAD_Role_ID(ctx));
+		return role != null
+				&& role.getAD_Client_ID() == 0
+				&& MRole.USERLEVEL_System.equals(role.getUserLevel());
 	}
 
 	private void setupHandlers() {
@@ -237,8 +266,11 @@ public class PackInHandler extends DefaultHandler {
 	private void processElement(Element element) throws SAXException
 	{
 		ElementHandler handler = handlerRegistry.getHandler(element);
-		if (handler != null)
+		if (handler != null) {
+			if (isSystemOnlyElement(element, handler) && !isSystemSession())
+				throw new AdempiereException("Element " + element.getElementValue() + " can only be imported by the System tenant with a System role");
 			handler.startElement(m_ctx, element);
+		}
 		if (element.defer)
 		{
 			defer.add(new DeferEntry(element, true));
