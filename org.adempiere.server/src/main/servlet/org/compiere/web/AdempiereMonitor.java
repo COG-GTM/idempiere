@@ -140,6 +140,7 @@ public class AdempiereMonitor extends HttpServlet
 	protected void doGet (HttpServletRequest request, HttpServletResponse response)
 		throws ServletException, IOException
 	{
+		response.setHeader("Content-Security-Policy", "default-src 'self'; object-src 'none'; frame-ancestors 'self'");
 		boolean xmlOutput = false;
 		String responseType = request.getParameter("responseContentType");
 		xmlOutput = "xml".equalsIgnoreCase(responseType);
@@ -232,7 +233,7 @@ public class AdempiereMonitor extends HttpServlet
 		{
 			p message = getRequestMessage(request);
 			message.addElement(new strong("Server not found: "));
-			message.addElement(serverID);
+			message.addElement(Util.maskHTML(serverID));
 			return false;
 		}
 		
@@ -303,7 +304,7 @@ public class AdempiereMonitor extends HttpServlet
 		{
 			p message = getRequestMessage(request);
 			message.addElement(new strong("Server not found: "));
-			message.addElement(serverID);
+			message.addElement(Util.maskHTML(serverID));
 			return false;
 		}
 		//
@@ -312,7 +313,7 @@ public class AdempiereMonitor extends HttpServlet
 		{
 			p message = getRequestMessage(request);
 			message.addElement(new strong(error));
-			message.addElement(serverID);
+			message.addElement(Util.maskHTML(serverID));
 		}
 		
 		//
@@ -362,7 +363,7 @@ public class AdempiereMonitor extends HttpServlet
 					if (server == null) {
 						message = new p();
 						message.addElement(new strong("Server not found: "));
-						message.addElement(serverID);
+						message.addElement(Util.maskHTML(serverID));
 						request.setAttribute(REQUEST_MESSAGE_ATTRIBUTE, message);
 						return;
 					} else {
@@ -379,9 +380,9 @@ public class AdempiereMonitor extends HttpServlet
 		catch (Exception e)
 		{
 			p message = new p();
-			message.addElement(new strong("Error processing parameter: " + action));
+			message.addElement(new strong("Error processing parameter: " + Util.maskHTML(action)));
 			message.addElement(new br());
-			message.addElement(e.toString());
+			message.addElement(Util.maskHTML(e.toString()));
 			request.setAttribute(REQUEST_MESSAGE_ATTRIBUTE, message);
 		}
 	}	//	processActionParameter
@@ -601,7 +602,7 @@ public class AdempiereMonitor extends HttpServlet
 		if (AD_Client_ID < 0)
 		{
 			p message = getRequestMessage(request);
-			message.addElement("No EMail: " + email);
+			message.addElement("No EMail: " + Util.maskHTML(email));
 			return false;
 		}
 		
@@ -644,18 +645,18 @@ public class AdempiereMonitor extends HttpServlet
 			else if (record_ID == null || record_ID.length() == 0)
 			{
 				CacheMgt.get().reset(tableName);
-				message.addElement("Cache Reset: " + tableName);
+				message.addElement("Cache Reset: " + Util.maskHTML(tableName));
 			}
 			else
 			{
 				CacheMgt.get().reset(tableName, Integer.parseInt(record_ID));
-				message.addElement("Cache Reset: " + tableName + ", Record_ID=" + record_ID);
+				message.addElement("Cache Reset: " + Util.maskHTML(tableName) + ", Record_ID=" + Util.maskHTML(record_ID));
 			}
 		}
 		catch (Exception e)
 		{
 			log.severe(e.toString());
-			message.addElement("Error: " + e.toString());
+			message.addElement("Error: " + Util.maskHTML(e.toString()));
 		}
 		return false;	//	continue
 	}	//	processEMailParameter
@@ -1687,7 +1688,7 @@ public class AdempiereMonitor extends HttpServlet
 		if (nodeId == null || nodeId.length() == 0)
 			return false;
 		
-		WebDoc doc = WebDoc.create ("Details for node " + nodeId);
+		WebDoc doc = WebDoc.create ("Details for node " + Util.maskHTML(nodeId));
 		//	Body
 		body b = doc.getBody();
 		p para = new p();		
