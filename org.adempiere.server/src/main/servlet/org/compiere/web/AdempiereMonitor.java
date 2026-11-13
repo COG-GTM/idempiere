@@ -140,7 +140,7 @@ public class AdempiereMonitor extends HttpServlet
 	protected void doGet (HttpServletRequest request, HttpServletResponse response)
 		throws ServletException, IOException
 	{
-		response.setHeader("Content-Security-Policy", "default-src 'self'; object-src 'none'; frame-ancestors 'self'");
+		response.setHeader("Content-Security-Policy", "object-src 'none'; frame-ancestors 'self'");
 		boolean xmlOutput = false;
 		String responseType = request.getParameter("responseContentType");
 		xmlOutput = "xml".equalsIgnoreCase(responseType);
