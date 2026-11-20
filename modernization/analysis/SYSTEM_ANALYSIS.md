@@ -121,7 +121,7 @@ re-creation.
 `Doc_AllocationHdr.java:192`) is the richest O2C accounting step. Its GL effects (verified in the
 source) are: **UnallocatedCash, Receivable (C_Receivable), DiscountExp, WriteOff**, plus
 **RealizedGain / RealizedLoss** from multi-currency settlement. This is the exact logic the
-pre-completed migration slice (Section 9) re-implements on PostgreSQL with a parity test.
+pre-completed migration slice (Section 10) re-implements on PostgreSQL with a parity test.
 
 ## 5. User journeys (rediscovered from code)
 
@@ -133,9 +133,9 @@ file length in this repo and is used as a complexity proxy.
 |---|---|---|---|---|
 | **Order-to-Cash (O2C)** | Sales Order → Shipment → Invoice → Payment → **Allocation** → GL | `MOrder` (3,287), `MInOut` (3,644), `MInvoice` (3,662), `MPayment` (3,388), `MAllocationHdr` (1,097) | `Doc_AllocationHdr` (2,159), `Doc_Invoice` (1,601) | **Rewrite / extract first** |
 | **Procure-to-Pay (P2P)** | Requisition → PO → Receipt → Match → Vendor Invoice → Payment | `MRequisition` (624), `MOrder` (3,287), `MInOut` (3,644), `MMatchPO` (1,480), `MMatchInv` (479) | `Doc_MatchInv` (2,878), `Doc_MatchPO` | **Refactor** |
-| **Record-to-Report (R2R)** | GL Journal → Fact_Acct → financial reports | `MJournal`, `MFactAcct` | `Doc_GLJournal` | **Refactor** (well-factored) |
+| **Record-to-Report (R2R)** | GL Journal → Fact_Acct → financial reports | `MJournal`, `MFactAcct` | `Doc_GLJournal` | **Carry-forward** (reporting moves to Power BI, `modernization/powerbi/`) |
 | **Inventory / Material Movement** | Movement, Inventory count, internal use | `MMovement` (1,230), `MInventory` (1,354) | `Doc_Movement`, `Doc_Inventory` | **Carry-forward** (mechanical) |
-| **Manufacturing** | Production → BOM issue/receipt | `MProduction` (1,100) | `Doc_Production` | **Carry-forward** (low priority) |
+| **Manufacturing** | Production → BOM issue/receipt | `MProduction` (1,100) | `Doc_Production` | **Refactor** |
 
 Scoring axes (full matrix in `modernization/plan/MIGRATION_PLAN.md`): Oracle-coupling density,
 code complexity (LOC + branching), data volume, downstream blast radius, business criticality.
@@ -158,8 +158,9 @@ translation — which is the refactor work the backlog tracks.
 ## 7. Data estate (sizing the migration, mock)
 
 The migration-effort axis needs row volumes per journey. Production figures are unavailable for a
-public fork, so the demo uses a **mock Oracle estate** (DuckDB-backed, drop-in `snowflake.connector`
-shape) profiled by Dana (see `modernization/DANA_HOWTO.md`). Volume drives both downtime windows and
+public fork, so the demo uses a **mock Oracle estate**: per-journey table row counts in
+`modernization/tools/journey_data.py` (`JOURNEY_TABLES`), exported to CSV and profiled by Dana (see
+`modernization/DANA_HOWTO.md`). Volume drives both downtime windows and
 parity-test sample sizes; the largest tables (`C_Invoice`/`C_InvoiceLine`, `Fact_Acct`,
 `M_Transaction`) gate O2C and R2R cutover.
 
@@ -169,7 +170,7 @@ What breaks if tables or SQL change under migration (surfaces verified against t
 
 | Surface | Module / classes | Migration risk |
 |---|---|---|
-| Web services / external integration | `org.idempiere.webservices`, `org.idempiere.adinterface` (`Process.java`; CXF/Jersey) | embedded SQL with `ROWNUM`/`DUAL`/date fns fails on PG; type/serialization drift |
+| Web services / external integration | iDempiere web-services plugin (`org.idempiere.webservices`, `org.idempiere.adinterface`; not in this fork, which ships only `org.idempiere.webservices.client-feature`) | embedded SQL with `ROWNUM`/`DUAL`/date fns fails on PG; type/serialization drift |
 | Data replication | `org.adempiere.replication`, `org.adempiere.replication.server` (`I_AD_Replication*`) | sequences / triggers / CDC are DB-specific; replication SQL must be PG-compatible |
 | JasperReports | `org.adempiere.report.jasper(.library)` — **5 `.jrxml`** templates | report SQL embeds Oracle functions; `.jrxml` queries need review |
 | Scheduled processors / background jobs | `org.adempiere.server` (`ServerProcessCtl`, `BackgroundJob`) | nightly accounting/inventory jobs run heavy SQL — silent failures if not ported |
@@ -190,22 +191,44 @@ strangler-fig priority order:
 2. **Invoicing service** — `C_Invoice` lifecycle + `Doc_Invoice` posting.
 3. **Procurement & Matching service** — PO / receipt / `Doc_MatchInv` / `Doc_MatchPO`.
 4. **Inventory/Movement service** — mechanical, low coupling ⇒ carry-forward as-is behind an adapter.
-5. **Reporting/R2R read-model** — `Fact_Acct`-backed reporting, candidate for a read replica.
+5. **Reporting/R2R → Power BI** — `Fact_Acct`-backed reporting rebuilt as a Power BI semantic model
+   over an iDempiere-shaped PostgreSQL ledger, with legacy-SQL vs DAX parity (`modernization/powerbi/`,
+   Section 10).
 6. **Integration edge** (web services, replication, Jasper) — wrapped, last to move.
 
 Each deployable owns its tables, exposes an API, and is independently observable — which is what lets
 us instrument one in isolation.
 
-## 10. The pre-completed slice (what runs in the demo)
+## 10. The pre-completed slices (what runs in the demo)
 
-To make the migration tangible we ship **one** deployable already migrated and **running**:
-`modernization/services/o2c-allocation/` (Node/Express + PostgreSQL). It re-implements the
-allocation-posting accounting from `Doc_AllocationHdr` (UnallocatedCash / Receivable / Discount /
-WriteOff / Realized Gain-Loss) using **PostgreSQL-native SQL** — i.e. the migrated form of the
-Oracle `DECODE`/`(+)`/`NVL` constructs. It is instrumented with **Sentry + Datadog** and wired to
-**Slack → Devin**. A seeded regression (a reintroduced Oracle idiom / rounding mismatch) lets us show
-the slice **breaking live**, an alert firing, and Devin triaging it to a PR. A **parity test**
-(Oracle-expected vs PostgreSQL-actual `Fact_Acct` balances) is the acceptance gate.
+**O2C allocation & GL posting** — `modernization/services/o2c-allocation/` (Node 20 / Express). It
+re-implements the allocation-posting accounting from `Doc_AllocationHdr` (UnallocatedCash /
+Receivable / Discount / WriteOff / Realized Gain-Loss) using **PostgreSQL-native SQL** — `LEFT JOIN`
+and `COALESCE` in place of Oracle `(+)` / `NVL` — and rejects any posting whose debits ≠ credits.
+
+- **Database:** **embedded PGlite** in-process when `DATABASE_URL` is unset and `VERCEL` or
+  `EMBED_DB=1` is set (schema + seed load on cold start, non-durable). Otherwise it uses discrete
+  PostgreSQL (`DATABASE_URL` / `PG*`; PostgreSQL 16 in `docker-compose.yml` and CI).
+- **Deployment:** a Vercel function (`api/index.js`, `vercel.json`), deployed to production by
+  `.github/workflows/vercel-deploy-o2c.yml` on `master` pushes; Docker Compose for local runs.
+- **Observability:** **Sentry** (posting errors, flushed before the response) and **Datadog** (`dd-trace`
+  APM plus `posting.*` metrics via DogStatsD with an agent; metrics only, no APM, through the agentless
+  HTTP intake on Vercel). The service does not
+  call Slack: Sentry and Datadog monitors own the Slack alert that hands the incident to Devin.
+- **Seeded regressions:** `ALLOC_BUG=1` drops the realized-FX balancing line, so multi-currency
+  allocation #601 posts debit 525 vs credit 550 and fails while single-currency #600 still posts;
+  `/allocations/recompute` runs an O(n²) scan standing in for a dropped index (latency alert).
+- **Acceptance gate:** `test/parity.test.js` checks the `Fact_Acct` lines and balances for #600 and #601
+  against the expected iDempiere results, and that the seeded bug produces the imbalance.
+
+**R2R → Power BI** — `modernization/powerbi/`. An iDempiere-shaped PostgreSQL ledger
+(`sql/schema.sql`: `fact_acct`, `c_elementvalue`, `c_period`, `c_invoice`, `c_payment`, …) loaded from
+deterministic CSVs (`python -m r2r seed|load`); a Power BI project (`pbi/iDempiere R2R.pbip`) with a
+TMDL semantic model of 10 tables that imports the same CSVs, and a PBIR report (GL Overview). Parity
+compares the legacy report SQL (`legacy/*.sql` → `parity/expected/`) with the DAX equivalent run in
+Power BI Desktop (`dax/*.dax` → `parity/actual/`) via `python -m r2r compare`.
+
+The component view of both slices is in `modernization/ARCHITECTURE.md`.
 
 ## 11. Risk register (top items)
 

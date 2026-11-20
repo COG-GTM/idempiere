@@ -1,0 +1,81 @@
+// Modernization architecture for the iDempiere Oracle -> PostgreSQL workstream.
+// Edit this file, then run ./render.sh to regenerate architecture.png and architecture.svg.
+digraph modernization {
+  graph [rankdir=TB, fontname="DejaVu Sans", fontsize=18, labelloc=t, nodesep=0.35, ranksep=0.55,
+         label="iDempiere modernization: legacy monolith, migrated O2C slice, R2R to Power BI", pad=0.3];
+  node  [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=15, fillcolor="#ffffff", color="#555555"];
+  edge  [fontname="DejaVu Sans", fontsize=12, color="#555555"];
+
+  subgraph cluster_legacy {
+    label="Legacy iDempiere (OSGi / Equinox, Maven + Tycho)"; style="rounded,filled"; fillcolor="#eef2f7"; color="#8899aa";
+    zk      [label="ZK web UI\norg.adempiere.ui.zk"];
+    docs    [label="Documents + DocAction\nMOrder, MInvoice, MPayment,\nMAllocationHdr, MJournal"];
+    posting [label="Posting engine\norg.idempiere.acct\nDoc_* -> Fact -> FactLine"];
+    dbport  [label="DB portability layer\nConvert_PostgreSQL / Convert_SQL92"];
+    legdb   [label="Oracle or PostgreSQL\nFact_Acct, C_*, M_*\nmigration/ (1,099 scripts x 2)", shape=cylinder, fillcolor="#dde6f0"];
+    zk -> docs -> posting -> dbport -> legdb;
+    {rank=same; zk; docs; posting;}
+    {rank=same; dbport; legdb;}
+  }
+
+  subgraph cluster_o2c {
+    label="services/o2c-allocation (Node 20 / Express)"; style="rounded,filled"; fillcolor="#fdf1e6"; color="#c98b4a";
+    panel   [label="Control panel\npublic/index.html\nPost #600 / #601, slow recompute"];
+    server  [label="src/server.js\n/health, /allocations/:id/facts,\n/allocations/:id/post, /allocations/recompute"];
+    alloc   [label="src/allocation.js\nbuildFacts / postAllocation\n(Doc_AllocationHdr re-implemented)"];
+    dbjs    [label="src/db.js\nembedded unless DATABASE_URL\n(or PG* off Vercel)"];
+    pg16    [label="PostgreSQL 16\n(docker-compose, CI)", shape=cylinder, fillcolor="#f6dcc2"];
+    pglite  [label="Embedded PGlite\n(VERCEL or EMBED_DB=1,\nno DATABASE_URL)", shape=cylinder, fillcolor="#f6dcc2"];
+    panel -> server -> alloc -> dbjs;
+    {rank=same; panel; server; alloc;}
+    dbjs -> pg16; dbjs -> pglite;
+    {rank=same; pg16; pglite;}
+  }
+
+  subgraph cluster_r2r {
+    label="powerbi/ (R2R -> Power BI)"; style="rounded,filled"; fillcolor="#eaf5ea"; color="#6a9f6a";
+    cli     [label="python -m r2r\nseed / load / expected / compare / check"];
+    csv     [label="data/*.csv\n(deterministic seed)", shape=note, fillcolor="#d8ecd8"];
+    r2rdb   [label="PostgreSQL r2r\nsql/schema.sql (fact_acct,\nc_elementvalue, c_period, ...)", shape=cylinder, fillcolor="#d8ecd8"];
+    legsql  [label="legacy/*.sql\n-> parity/expected/*.csv"];
+    model   [label="iDempiere R2R.pbip\nTMDL semantic model (10 tables)\nPBIR report: GL Overview"];
+    dax     [label="dax/*.dax\n(Power BI Desktop, Windows)\n-> parity/actual/*.csv"];
+    cli -> csv [label="seed"];
+    csv -> r2rdb [label="load"];
+    r2rdb -> legsql [label="expected"];
+    csv -> model [label="DataFolder"];
+    model -> dax;
+    {rank=same; cli; csv; r2rdb;}
+    {rank=same; legsql; model; dax;}
+  }
+
+  subgraph cluster_assets {
+    label="Workstream assets and CI"; style="rounded,filled"; fillcolor="#f8f5fc"; color="#8a6fb0";
+    ci      [label="GitHub Actions\nmodernization-ci: map build, tools pytest,\no2c parity on PostgreSQL 16\nsonarcloud-modernization, journey-map-pages", fillcolor="#ffffff"];
+    journey [label="journey-map/\nReact + React Flow (Vite)\nGitHub Pages", fillcolor="#f3eefa", color="#8a6fb0"];
+  tools   [label="tools/\nenrich_context.py, journey_data.py (mock),\ndownstream/registry.json, notify_slack.py", fillcolor="#f3eefa", color="#8a6fb0"];
+    {rank=same; ci; journey; tools;}
+  }
+
+  subgraph cluster_ops {
+    label="Delivery and observability"; style="rounded,filled"; fillcolor="#f4f4f4"; color="#999999";
+    vercel  [label="Vercel function\napi/index.js\n(vercel-deploy-o2c.yml, push to master)"];
+    sentry  [label="Sentry\n(SENTRY_DSN)"];
+    datadog [label="Datadog\nagent: dd-trace APM + DogStatsD\nVercel: HTTP metrics only"];
+    slack   [label="Slack alert -> Devin triage\n(owned by Sentry/Datadog monitors)"];
+    {rank=same; sentry; datadog;}
+  }
+
+  posting -> alloc  [label="extracted slice", style=dashed, color="#c98b4a"];
+  legdb   -> r2rdb  [label="schema shape", style=dashed, color="#6a9f6a"];
+  compare [label="r2r compare\nexpected vs actual", fillcolor="#d8ecd8", color="#6a9f6a"];
+  legsql -> compare; dax -> compare;
+
+  server -> vercel  [label="deployed as", style=dashed];
+  server -> sentry  [label="posting errors"];
+  server -> datadog [label="posting.* metrics\n(+ traces with agent)"];
+  sentry -> slack; datadog -> slack;
+  pg16 -> cli [style=invis]; pglite -> r2rdb [style=invis];
+  compare -> ci [style=invis];
+  ci -> journey [style=dotted]; ci -> tools [style=dotted];
+}
