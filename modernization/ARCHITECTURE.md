@@ -47,9 +47,9 @@ Source: [`diagrams/architecture.dot`](diagrams/architecture.dot) (Graphviz). Edi
 - **Observability.** `src/telemetry/datadog.js` runs in one of two modes. With an agent, it loads
   `dd-trace` (APM traces) and sends `posting.*` metrics through DogStatsD. Agentless mode applies on
   Vercel, or when `DD_API_KEY` is set without `DD_AGENT_HOST`. It sends only the `posting.*` metrics,
-  to the Datadog HTTP intake (needs `DD_API_KEY`), with no tracer and so no APM traces. `src/telemetry/sentry.js` is active only when `SENTRY_DSN`
-  is set; posting errors
-  are captured and flushed before the response. The service never calls Slack: Sentry and Datadog
+  to the Datadog HTTP intake (needs `DD_API_KEY`), with no tracer and so no APM traces.
+  `src/telemetry/sentry.js` is active only when `SENTRY_DSN` is set; posting errors are captured and
+  flushed before the response. The service never calls Slack: Sentry and Datadog
   monitors own the Slack alert that hands the incident to Devin.
 - **Seeded regressions.** `ALLOC_BUG=1` drops the realized-FX balancing line, so #601 fails
   (debit 525 vs credit 550) while #600 still posts. `/allocations/recompute` runs an O(n²) scan
