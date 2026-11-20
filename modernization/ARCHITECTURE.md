@@ -33,18 +33,22 @@ Source: [`diagrams/architecture.dot`](diagrams/architecture.dot) (Graphviz). Edi
   (HTTP 422, `PostingNotBalancedError`) and otherwise writes `fact_acct`. Rates come from
   `c_conversion_rate` with `LEFT JOIN` / `COALESCE` instead of Oracle `(+)` / `NVL`.
 - **Database modes** (`src/db.js`):
-  - *Discrete PostgreSQL* when `DATABASE_URL` or `PG*` is set — `docker-compose.yml` (PostgreSQL 16
-    on 5432) and CI. `npm run migrate` applies `src/sql/schema.sql` + `seed.sql`.
-  - *Embedded PGlite* (in-process WASM PostgreSQL) when there is no `DATABASE_URL` and `VERCEL` is set
-    or `EMBED_DB=1`. Schema and seed load on cold start; data is per-instance and not durable.
+  - *Embedded PGlite* (in-process WASM PostgreSQL) when `DATABASE_URL` is unset and either `VERCEL`
+    is set or `EMBED_DB=1`. `PG*` variables do not override this. Schema and seed load on cold start;
+    data is per-instance and not durable.
+  - *Discrete PostgreSQL* otherwise: `DATABASE_URL` (SSL for non-local hosts) or the `PG*` variables
+    (defaults `localhost:5432/o2c`) — `docker-compose.yml` (PostgreSQL 16) and CI. On Vercel, only
+    `DATABASE_URL` selects it. `npm run migrate` applies `src/sql/schema.sql` + `seed.sql`.
 - **Deployment.** `api/index.js` exports the Express app as a Vercel function; `vercel.json`
   rewrites every path to `/api`, bundles `public/`, `src/` and the PGlite `dist/` assets, and sets
   `maxDuration` 60 s. `.github/workflows/vercel-deploy-o2c.yml` deploys to Vercel production on
   pushes to `master` that touch the service (or manual dispatch); there is no per-PR preview workflow.
   `Dockerfile` + `docker-compose.yml` run the same service locally with a Datadog agent.
-- **Observability.** `src/telemetry/datadog.js` loads `dd-trace` first and sends `posting.*`
-  metrics through DogStatsD (agent) or, on Vercel, the Datadog HTTP intake (agentless, needs
-  `DD_API_KEY`). `src/telemetry/sentry.js` is active only when `SENTRY_DSN` is set; posting errors
+- **Observability.** `src/telemetry/datadog.js` runs in one of two modes. With an agent, it loads
+  `dd-trace` (APM traces) and sends `posting.*` metrics through DogStatsD. Agentless mode applies on
+  Vercel, or when `DD_API_KEY` is set without `DD_AGENT_HOST`. It sends only the `posting.*` metrics,
+  to the Datadog HTTP intake (needs `DD_API_KEY`), with no tracer and so no APM traces. `src/telemetry/sentry.js` is active only when `SENTRY_DSN`
+  is set; posting errors
   are captured and flushed before the response. The service never calls Slack: Sentry and Datadog
   monitors own the Slack alert that hands the incident to Devin.
 - **Seeded regressions.** `ALLOC_BUG=1` drops the realized-FX balancing line, so #601 fails

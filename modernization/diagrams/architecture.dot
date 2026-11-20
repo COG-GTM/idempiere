@@ -23,9 +23,9 @@ digraph modernization {
     panel   [label="Control panel\npublic/index.html\nPost #600 / #601, slow recompute"];
     server  [label="src/server.js\n/health, /allocations/:id/facts,\n/allocations/:id/post, /allocations/recompute"];
     alloc   [label="src/allocation.js\nbuildFacts / postAllocation\n(Doc_AllocationHdr re-implemented)"];
-    dbjs    [label="src/db.js\nDATABASE_URL / PG* or embedded"];
+    dbjs    [label="src/db.js\nembedded unless DATABASE_URL\n(or PG* off Vercel)"];
     pg16    [label="PostgreSQL 16\n(docker-compose, CI)", shape=cylinder, fillcolor="#f6dcc2"];
-    pglite  [label="Embedded PGlite\n(VERCEL or EMBED_DB=1)", shape=cylinder, fillcolor="#f6dcc2"];
+    pglite  [label="Embedded PGlite\n(VERCEL or EMBED_DB=1,\nno DATABASE_URL)", shape=cylinder, fillcolor="#f6dcc2"];
     panel -> server -> alloc -> dbjs;
     {rank=same; panel; server; alloc;}
     dbjs -> pg16; dbjs -> pglite;
@@ -61,7 +61,7 @@ digraph modernization {
     label="Delivery and observability"; style="rounded,filled"; fillcolor="#f4f4f4"; color="#999999";
     vercel  [label="Vercel function\napi/index.js\n(vercel-deploy-o2c.yml, push to master)"];
     sentry  [label="Sentry\n(SENTRY_DSN)"];
-    datadog [label="Datadog\nAPM + DogStatsD or agentless"];
+    datadog [label="Datadog\nagent: dd-trace APM + DogStatsD\nVercel: HTTP metrics only"];
     slack   [label="Slack alert -> Devin triage\n(owned by Sentry/Datadog monitors)"];
     {rank=same; sentry; datadog;}
   }
@@ -73,7 +73,7 @@ digraph modernization {
 
   server -> vercel  [label="deployed as", style=dashed];
   server -> sentry  [label="posting errors"];
-  server -> datadog [label="posting.* metrics, traces"];
+  server -> datadog [label="posting.* metrics\n(+ traces with agent)"];
   sentry -> slack; datadog -> slack;
   pg16 -> cli [style=invis]; pglite -> r2rdb [style=invis];
   compare -> ci [style=invis];

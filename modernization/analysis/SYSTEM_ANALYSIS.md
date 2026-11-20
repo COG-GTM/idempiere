@@ -206,13 +206,14 @@ re-implements the allocation-posting accounting from `Doc_AllocationHdr` (Unallo
 Receivable / Discount / WriteOff / Realized Gain-Loss) using **PostgreSQL-native SQL** — `LEFT JOIN`
 and `COALESCE` in place of Oracle `(+)` / `NVL` — and rejects any posting whose debits ≠ credits.
 
-- **Database:** discrete PostgreSQL (`DATABASE_URL` / `PG*`; PostgreSQL 16 in `docker-compose.yml`
-  and CI), or **embedded PGlite** in-process when `VERCEL` is set or `EMBED_DB=1` (schema + seed load on
-  cold start, non-durable).
+- **Database:** **embedded PGlite** in-process when `DATABASE_URL` is unset and `VERCEL` or
+  `EMBED_DB=1` is set (schema + seed load on cold start, non-durable). Otherwise it uses discrete
+  PostgreSQL (`DATABASE_URL` / `PG*`; PostgreSQL 16 in `docker-compose.yml` and CI).
 - **Deployment:** a Vercel function (`api/index.js`, `vercel.json`), deployed to production by
   `.github/workflows/vercel-deploy-o2c.yml` on `master` pushes; Docker Compose for local runs.
 - **Observability:** **Sentry** (posting errors, flushed before the response) and **Datadog** (`dd-trace`
-  APM plus `posting.*` metrics via DogStatsD, or agentless HTTP intake on Vercel). The service does not
+  APM plus `posting.*` metrics via DogStatsD with an agent; metrics only, no APM, through the agentless
+  HTTP intake on Vercel). The service does not
   call Slack: Sentry and Datadog monitors own the Slack alert that hands the incident to Devin.
 - **Seeded regressions:** `ALLOC_BUG=1` drops the realized-FX balancing line, so multi-currency
   allocation #601 posts debit 525 vs credit 550 and fails while single-currency #600 still posts;
