@@ -31,6 +31,7 @@ async function persistedExtras(id) {
   return rows[0];
 }
 
+// Fixture ids sit far above seeded data; inserts fail instead of overwriting an existing allocation.
 async function dropFixture(id) {
   await db.query('DELETE FROM fact_acct WHERE record_id = $1', [id]);
   await db.query('DELETE FROM c_allocationhdr WHERE c_allocationhdr_id = $1', [id]);
@@ -110,52 +111,60 @@ test('multi-line allocation looks each (currency, date) rate up once and keeps p
 });
 
 test('posting a mixed-currency multi-line allocation writes the built facts to the ledger in order', async (t) => {
-  await dropFixture(950);
-  t.after(() => dropFixture(950));
   // Test-DB rows: an EUR line and a USD line (no payment -> header USD, header date) settle on 2024-02-10.
   await db.query(`INSERT INTO c_allocationhdr (c_allocationhdr_id, c_currency_id, datetrx)
-                  VALUES (950, 100, DATE '2024-02-10') ON CONFLICT DO NOTHING`);
+                  VALUES (990950, 100, DATE '2024-02-10')`);
+  t.after(() => dropFixture(990950));
   await db.query(`INSERT INTO c_allocationline (c_allocationline_id, c_allocationhdr_id, c_invoice_id,
                     c_payment_id, c_bpartner_id, amount, discountamt, writeoffamt) VALUES
-                    (950, 950, 401, 501, 201, 200.00, 0.00, 0.00),
-                    (951, 950, 400, NULL, 200, 300.00, 10.00, 5.00),
-                    (952, 950, 401, 501, 201, 100.00, 0.00, 0.00)
-                  ON CONFLICT DO NOTHING`);
-  await db.query('UPDATE c_allocationhdr SET posted = FALSE WHERE c_allocationhdr_id = 950');
-  await db.query('DELETE FROM fact_acct WHERE record_id = 950');
+                    (990950, 990950, 401, 501, 201, 200.00, 0.00, 0.00),
+                    (990951, 990950, 400, NULL, 200, 300.00, 10.00, 5.00),
+                    (990952, 990950, 401, 501, 201, 100.00, 0.00, 0.00)`);
 
-  const { facts, debit, credit } = await buildFacts(await loadAllocation(950), { buggy: false });
-  const res = await postAllocation(950, { buggy: false });
-  assert.deepEqual(res, { allocationId: 950, posted: true, debit, credit, lines: facts.length });
+  const { facts, debit, credit } = await buildFacts(await loadAllocation(990950), { buggy: false });
+  const res = await postAllocation(990950, { buggy: false });
+  assert.deepEqual(res, { allocationId: 990950, posted: true, debit, credit, lines: facts.length });
 
   const { rows } = await db.query(
     `SELECT account_id, amtacctdr::float8 AS dr, amtacctcr::float8 AS cr, description
-       FROM fact_acct WHERE record_id = 950 ORDER BY fact_acct_id`,
+       FROM fact_acct WHERE record_id = 990950 ORDER BY fact_acct_id`,
   );
   assert.deepEqual(rows, facts.map((f) => ({ account_id: f.accountId, dr: f.dr, cr: f.cr, description: f.desc })));
-  assert.deepEqual(await persistedExtras(950), { n: facts.length, bad: 0 });
+  assert.deepEqual(await persistedExtras(990950), { n: facts.length, bad: 0 });
   // The USD line on the EUR line's date must not reuse the EUR rate.
   assert.deepEqual(rows[3], { account_id: 301, dr: 300, cr: 0, description: 'Cash received (100@1)' });
 });
 
 test('posting more facts than one insert batch writes every fact in order', async (t) => {
-  await dropFixture(951);
-  t.after(() => dropFixture(951));
   // 340 USD lines with a discount => 3 facts each = 1020 facts, more than one 1000-row INSERT.
   await db.query(`INSERT INTO c_allocationhdr (c_allocationhdr_id, c_currency_id, datetrx)
-                  VALUES (951, 100, DATE '2024-01-20') ON CONFLICT DO NOTHING`);
+                  VALUES (990951, 100, DATE '2024-03-01')`);
+  t.after(() => dropFixture(990951));
   await db.query(`INSERT INTO c_allocationline (c_allocationline_id, c_allocationhdr_id, c_invoice_id,
                     c_payment_id, c_bpartner_id, amount, discountamt, writeoffamt)
-                  SELECT 10000 + g, 951, 400, 500, 200, 1 + g, 1.00, 0.00 FROM generate_series(0, 339) g
-                  ON CONFLICT DO NOTHING`);
-  const { facts } = await buildFacts(await loadAllocation(951), { buggy: false });
+                  SELECT 9900000 + g, 990951, 400, 500, 200, 1 + g, 1.00, 0.00 FROM generate_series(0, 339) g`);
+  const { facts } = await buildFacts(await loadAllocation(990951), { buggy: false });
   assert.equal(facts.length, 1020);
-  const res = await postAllocation(951, { buggy: false });
+  let factInserts = 0;
+  const { withTransaction } = db;
+  db.withTransaction = (fn) => withTransaction((client) => fn({
+    query: (text, params) => {
+      if (/INSERT INTO fact_acct/.test(text)) factInserts += 1;
+      return client.query(text, params);
+    },
+  }));
+  let res;
+  try {
+    res = await postAllocation(990951, { buggy: false });
+  } finally {
+    db.withTransaction = withTransaction;
+  }
+  assert.equal(factInserts, 2);
   assert.equal(res.lines, 1020);
   const { rows } = await db.query(
     `SELECT account_id, amtacctdr::float8 AS dr, amtacctcr::float8 AS cr
-       FROM fact_acct WHERE record_id = 951 ORDER BY fact_acct_id`,
+       FROM fact_acct WHERE record_id = 990951 ORDER BY fact_acct_id`,
   );
   assert.deepEqual(rows, facts.map((f) => ({ account_id: f.accountId, dr: f.dr, cr: f.cr })));
-  assert.deepEqual(await persistedExtras(951), { n: 1020, bad: 0 });
+  assert.deepEqual(await persistedExtras(990951), { n: 1020, bad: 0 });
 });
