@@ -109,7 +109,9 @@ test('multi-line allocation looks each (currency, date) rate up once and keeps p
     Array(3).fill(['UnallocatedCash', 'Receivable', 'RealizedLoss']).flat());
 });
 
-test('posting a mixed-currency multi-line allocation writes the built facts to the ledger in order', async () => {
+test('posting a mixed-currency multi-line allocation writes the built facts to the ledger in order', async (t) => {
+  await dropFixture(950);
+  t.after(() => dropFixture(950));
   // Test-DB rows: an EUR line and a USD line (no payment -> header USD, header date) settle on 2024-02-10.
   await db.query(`INSERT INTO c_allocationhdr (c_allocationhdr_id, c_currency_id, datetrx)
                   VALUES (950, 100, DATE '2024-02-10') ON CONFLICT DO NOTHING`);
@@ -134,10 +136,11 @@ test('posting a mixed-currency multi-line allocation writes the built facts to t
   assert.deepEqual(await persistedExtras(950), { n: facts.length, bad: 0 });
   // The USD line on the EUR line's date must not reuse the EUR rate.
   assert.deepEqual(rows[3], { account_id: 301, dr: 300, cr: 0, description: 'Cash received (100@1)' });
-  await dropFixture(950);
 });
 
-test('posting more facts than one insert batch writes every fact in order', async () => {
+test('posting more facts than one insert batch writes every fact in order', async (t) => {
+  await dropFixture(951);
+  t.after(() => dropFixture(951));
   // 340 USD lines with a discount => 3 facts each = 1020 facts, more than one 1000-row INSERT.
   await db.query(`INSERT INTO c_allocationhdr (c_allocationhdr_id, c_currency_id, datetrx)
                   VALUES (951, 100, DATE '2024-01-20') ON CONFLICT DO NOTHING`);
@@ -155,5 +158,4 @@ test('posting more facts than one insert batch writes every fact in order', asyn
   );
   assert.deepEqual(rows, facts.map((f) => ({ account_id: f.accountId, dr: f.dr, cr: f.cr })));
   assert.deepEqual(await persistedExtras(951), { n: 1020, bad: 0 });
-  await dropFixture(951);
 });
