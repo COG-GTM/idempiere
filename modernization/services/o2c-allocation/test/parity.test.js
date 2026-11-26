@@ -17,6 +17,25 @@ before(async () => {
 
 after(async () => { await db.pool.end(); });
 
+// Currency, source amounts and accounting date must match what posting derives from the header.
+async function persistedExtras(id) {
+  const { rows } = await db.query(
+    `SELECT count(*)::int AS n,
+            count(*) FILTER (WHERE f.c_currency_id <> 100 OR f.amtsourcedr <> f.amtacctdr
+                             OR f.amtsourcecr <> f.amtacctcr OR f.dateacct <> h.datetrx
+                             OR f.ad_table_id <> 735)::int AS bad
+       FROM fact_acct f JOIN c_allocationhdr h ON h.c_allocationhdr_id = f.record_id
+      WHERE f.record_id = $1`,
+    [id],
+  );
+  return rows[0];
+}
+
+async function dropFixture(id) {
+  await db.query('DELETE FROM fact_acct WHERE record_id = $1', [id]);
+  await db.query('DELETE FROM c_allocationhdr WHERE c_allocationhdr_id = $1', [id]);
+}
+
 function byType(facts) {
   const m = {};
   for (const f of facts) m[f.acctType] = (m[f.acctType] || 0) + (f.dr - f.cr);
@@ -112,6 +131,29 @@ test('posting a mixed-currency multi-line allocation writes the built facts to t
        FROM fact_acct WHERE record_id = 950 ORDER BY fact_acct_id`,
   );
   assert.deepEqual(rows, facts.map((f) => ({ account_id: f.accountId, dr: f.dr, cr: f.cr, description: f.desc })));
+  assert.deepEqual(await persistedExtras(950), { n: facts.length, bad: 0 });
   // The USD line on the EUR line's date must not reuse the EUR rate.
   assert.deepEqual(rows[3], { account_id: 301, dr: 300, cr: 0, description: 'Cash received (100@1)' });
+  await dropFixture(950);
+});
+
+test('posting more facts than one insert batch writes every fact in order', async () => {
+  // 340 USD lines with a discount => 3 facts each = 1020 facts, more than one 1000-row INSERT.
+  await db.query(`INSERT INTO c_allocationhdr (c_allocationhdr_id, c_currency_id, datetrx)
+                  VALUES (951, 100, DATE '2024-01-20') ON CONFLICT DO NOTHING`);
+  await db.query(`INSERT INTO c_allocationline (c_allocationline_id, c_allocationhdr_id, c_invoice_id,
+                    c_payment_id, c_bpartner_id, amount, discountamt, writeoffamt)
+                  SELECT 10000 + g, 951, 400, 500, 200, 1 + g, 1.00, 0.00 FROM generate_series(0, 339) g
+                  ON CONFLICT DO NOTHING`);
+  const { facts } = await buildFacts(await loadAllocation(951), { buggy: false });
+  assert.equal(facts.length, 1020);
+  const res = await postAllocation(951, { buggy: false });
+  assert.equal(res.lines, 1020);
+  const { rows } = await db.query(
+    `SELECT account_id, amtacctdr::float8 AS dr, amtacctcr::float8 AS cr
+       FROM fact_acct WHERE record_id = 951 ORDER BY fact_acct_id`,
+  );
+  assert.deepEqual(rows, facts.map((f) => ({ account_id: f.accountId, dr: f.dr, cr: f.cr })));
+  assert.deepEqual(await persistedExtras(951), { n: 1020, bad: 0 });
+  await dropFixture(951);
 });
