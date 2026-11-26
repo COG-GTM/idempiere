@@ -145,11 +145,11 @@ test('posting more facts than one insert batch writes every fact in order', asyn
                   SELECT 9900000 + g, 990951, 400, 500, 200, 1 + g, 1.00, 0.00 FROM generate_series(0, 339) g`);
   const { facts } = await buildFacts(await loadAllocation(990951), { buggy: false });
   assert.equal(facts.length, 1020);
-  let factInserts = 0;
+  const factInserts = [];
   const { withTransaction } = db;
   db.withTransaction = (fn) => withTransaction((client) => fn({
     query: (text, params) => {
-      if (/INSERT INTO fact_acct/.test(text)) factInserts += 1;
+      if (/INSERT INTO fact_acct/.test(text)) factInserts.push(params.length / 10);
       return client.query(text, params);
     },
   }));
@@ -159,7 +159,7 @@ test('posting more facts than one insert batch writes every fact in order', asyn
   } finally {
     db.withTransaction = withTransaction;
   }
-  assert.equal(factInserts, 2);
+  assert.deepEqual(factInserts, [1000, 20]);
   assert.equal(res.lines, 1020);
   const { rows } = await db.query(
     `SELECT account_id, amtacctdr::float8 AS dr, amtacctcr::float8 AS cr
