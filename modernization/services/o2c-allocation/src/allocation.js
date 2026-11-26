@@ -15,6 +15,7 @@ const dd = require('./telemetry/datadog');
 const ACCT_CURRENCY_ID = 100; // USD
 const AD_TABLE_C_ALLOCATIONHDR = 735; // iDempiere AD_Table_ID for C_AllocationHdr
 const EPSILON = 0.005;
+const FACT_INSERT_BATCH = 1000; // 10 params per row, well under PostgreSQL's 65535 bind limit
 
 class PostingNotBalancedError extends Error {
   constructor(allocationId, dr, cr) {
@@ -85,6 +86,12 @@ async function loadAllocation(id, client = db) {
 // which leaves multi-currency allocations unbalanced — the seeded break.
 async function buildFacts(allocation, { buggy = false } = {}, client = db) {
   const { hdr, lines } = allocation;
+  const rates = new Map();
+  const rateFor = (ccy, dateISO) => {
+    const key = `${ccy}|${dateISO}`;
+    if (!rates.has(key)) rates.set(key, getRate(ccy, ACCT_CURRENCY_ID, dateISO, client));
+    return rates.get(key);
+  };
   const facts = [];
   let totalDr = 0;
   let totalCr = 0;
@@ -100,9 +107,9 @@ async function buildFacts(allocation, { buggy = false } = {}, client = db) {
     const invDate = (line.dateinvoiced || hdr.datetrx).toISOString().slice(0, 10);
 
     // Cash + discount + write-off settle at the PAYMENT-date rate.
-    const payRate = await getRate(payCcy, ACCT_CURRENCY_ID, payDate, client);
+    const payRate = await rateFor(payCcy, payDate);
     // The receivable was booked at the INVOICE-date rate (its carrying value).
-    const invRate = await getRate(invCcy, ACCT_CURRENCY_ID, invDate, client);
+    const invRate = await rateFor(invCcy, invDate);
 
     const cashAcct = round2(amount * payRate);
     const discountAcct = round2(discount * payRate);
@@ -159,13 +166,20 @@ async function postAllocation(id, { buggy = process.env.ALLOC_BUG === '1' } = {}
 
     await client.query(`DELETE FROM fact_acct WHERE ad_table_id = $1 AND record_id = $2`,
       [AD_TABLE_C_ALLOCATIONHDR, id]);
-    for (const f of facts) {
+    for (let i = 0; i < facts.length; i += FACT_INSERT_BATCH) {
+      const batch = facts.slice(i, i + FACT_INSERT_BATCH);
+      const params = [];
+      const values = batch.map((f) => {
+        const base = params.length;
+        params.push(AD_TABLE_C_ALLOCATIONHDR, id, f.accountId, f.ccy, f.dr, f.cr, f.dr, f.cr, f.desc,
+          allocation.hdr.datetrx);
+        return `(${Array.from({ length: 10 }, (_, k) => `$${base + k + 1}`).join(',')})`;
+      });
       await client.query(
         `INSERT INTO fact_acct (ad_table_id, record_id, account_id, c_currency_id,
             amtsourcedr, amtsourcecr, amtacctdr, amtacctcr, description, dateacct)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-        [AD_TABLE_C_ALLOCATIONHDR, id, f.accountId, f.ccy, f.dr, f.cr, f.dr, f.cr, f.desc,
-          allocation.hdr.datetrx],
+         VALUES ${values.join(',\n                ')}`,
+        params,
       );
     }
     await client.query(`UPDATE c_allocationhdr SET posted = TRUE WHERE c_allocationhdr_id = $1`, [id]);

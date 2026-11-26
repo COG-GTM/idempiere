@@ -69,3 +69,23 @@ test('USD allocation 600 is unaffected by the regression (single-currency)', asy
   const res = await postAllocation(600, { buggy: true });
   assert.equal(res.posted, true); // no FX => still balances even in bug mode
 });
+
+test('multi-line allocation looks each (currency, date) rate up once and keeps per-line facts', async () => {
+  const alloc = await loadAllocation(601);
+  const line = alloc.lines[0];
+  const batch = { hdr: alloc.hdr, lines: [line, { ...line }, { ...line }] };
+  let rateQueries = 0;
+  const counting = {
+    query: (text, params) => {
+      if (text.includes('c_conversion_rate')) rateQueries += 1;
+      return db.query(text, params);
+    },
+  };
+  const { facts, balanced, debit, credit } = await buildFacts(batch, { buggy: false }, counting);
+  assert.equal(rateQueries, 2); // payment-date + invoice-date EUR->USD, not 2 per line
+  assert.ok(balanced);
+  assert.equal(debit, 1650);
+  assert.equal(credit, 1650);
+  assert.deepEqual(facts.map((f) => f.acctType),
+    Array(3).fill(['UnallocatedCash', 'Receivable', 'RealizedLoss']).flat());
+});
